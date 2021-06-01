@@ -17,10 +17,8 @@
 
 package org.apache.shardingsphere.proxy.backend.text.distsql.rdl.impl;
 
-import org.apache.shardingsphere.distsql.parser.segment.TableRuleSegment;
 import org.apache.shardingsphere.distsql.parser.statement.rdl.create.impl.CreateShardingTableRuleStatement;
-import org.apache.shardingsphere.governance.core.registry.listener.event.rule.RuleConfigurationsAlteredEvent;
-import org.apache.shardingsphere.infra.config.RuleConfiguration;
+import org.apache.shardingsphere.governance.core.registry.watcher.event.rule.RuleConfigurationsAlteredEvent;
 import org.apache.shardingsphere.infra.eventbus.ShardingSphereEventBus;
 import org.apache.shardingsphere.infra.yaml.swapper.YamlRuleConfigurationSwapperEngine;
 import org.apache.shardingsphere.proxy.backend.communication.jdbc.connection.BackendConnection;
@@ -30,15 +28,10 @@ import org.apache.shardingsphere.proxy.backend.response.header.ResponseHeader;
 import org.apache.shardingsphere.proxy.backend.response.header.update.UpdateResponseHeader;
 import org.apache.shardingsphere.proxy.backend.text.SchemaRequiredBackendHandler;
 import org.apache.shardingsphere.sharding.api.config.ShardingRuleConfiguration;
-import org.apache.shardingsphere.sharding.api.config.rule.ShardingAutoTableRuleConfiguration;
-import org.apache.shardingsphere.sharding.api.config.rule.ShardingTableRuleConfiguration;
 import org.apache.shardingsphere.sharding.converter.ShardingRuleStatementConverter;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -55,6 +48,22 @@ public final class CreateShardingTableRuleBackendHandler extends SchemaRequiredB
     @Override
     public ResponseHeader execute(final String schemaName, final CreateShardingTableRuleStatement sqlStatement) {
         check(schemaName, sqlStatement);
+        create(schemaName, sqlStatement);
+        post(schemaName);
+        return new UpdateResponseHeader(sqlStatement);
+    }
+    
+    private void check(final String schemaName, final CreateShardingTableRuleStatement sqlStatement) {
+        Collection<String> existLogicTables = getLogicTables(schemaName);
+        Set<String> duplicateTableNames = sqlStatement.getTables().stream().collect(Collectors.toMap(each -> each.getLogicTable(), each -> 1, (a, b) -> a + b))
+                .entrySet().stream().filter(entry -> entry.getValue() > 1).map(entry -> entry.getKey()).collect(Collectors.toSet());
+        duplicateTableNames.addAll(sqlStatement.getTables().stream().map(each -> each.getLogicTable()).filter(existLogicTables::contains).collect(Collectors.toSet()));
+        if (!duplicateTableNames.isEmpty()) {
+            throw new DuplicateTablesException(duplicateTableNames);
+        }
+    }
+
+    private void create(final String schemaName, final CreateShardingTableRuleStatement sqlStatement) {
         ShardingRuleConfiguration shardingRuleConfiguration = (ShardingRuleConfiguration) new YamlRuleConfigurationSwapperEngine()
                 .swapToRuleConfigurations(Collections.singleton(ShardingRuleStatementConverter.convert(sqlStatement))).iterator().next();
         Optional<ShardingRuleConfiguration> existShardingRuleConfiguration = getShardingRuleConfiguration(schemaName);
@@ -64,35 +73,10 @@ public final class CreateShardingTableRuleBackendHandler extends SchemaRequiredB
         } else {
             ProxyContext.getInstance().getMetaData(schemaName).getRuleMetaData().getConfigurations().add(shardingRuleConfiguration);
         }
-        post(schemaName, ProxyContext.getInstance().getMetaData(schemaName).getRuleMetaData().getConfigurations());
-        return new UpdateResponseHeader(sqlStatement);
-    }
-    
-    private void check(final String schemaName, final CreateShardingTableRuleStatement sqlStatement) {
-        Collection<String> logicTableNames = new ArrayList<>(sqlStatement.getTables().size());
-        Collection<String> existLogicTables = getLogicTables(schemaName);
-        Set<String> duplicateTableNames = new HashSet<>(sqlStatement.getTables().size(), 1);
-        for (TableRuleSegment tableRuleSegment : sqlStatement.getTables()) {
-            if (logicTableNames.contains(tableRuleSegment.getLogicTable()) 
-                    || existLogicTables.contains(tableRuleSegment.getLogicTable())) {
-                duplicateTableNames.add(tableRuleSegment.getLogicTable());
-            }
-            logicTableNames.add(tableRuleSegment.getLogicTable());
-        }
-        if (!duplicateTableNames.isEmpty()) {
-            throw new DuplicateTablesException(duplicateTableNames);
-        }
     }
     
     private Collection<String> getLogicTables(final String schemaName) {
-        Optional<ShardingRuleConfiguration> shardingRuleConfiguration = getShardingRuleConfiguration(schemaName);
-        Collection<String> result = new LinkedList<>();
-        if (!shardingRuleConfiguration.isPresent()) {
-            return result;
-        }
-        result.addAll(shardingRuleConfiguration.get().getTables().stream().map(ShardingTableRuleConfiguration::getLogicTable).collect(Collectors.toList()));
-        result.addAll(shardingRuleConfiguration.get().getAutoTables().stream().map(ShardingAutoTableRuleConfiguration::getLogicTable).collect(Collectors.toList()));
-        return result;
+        return ProxyContext.getInstance().getMetaData(schemaName).getSchema().getAllTableNames();
     }
     
     private Optional<ShardingRuleConfiguration> getShardingRuleConfiguration(final String schemaName) {
@@ -100,8 +84,9 @@ public final class CreateShardingTableRuleBackendHandler extends SchemaRequiredB
                 .filter(each -> each instanceof ShardingRuleConfiguration).map(each -> (ShardingRuleConfiguration) each).findFirst();
     }
     
-    private void post(final String schemaName, final Collection<RuleConfiguration> rules) {
-        ShardingSphereEventBus.getInstance().post(new RuleConfigurationsAlteredEvent(schemaName, rules));
+    private void post(final String schemaName) {
+        ShardingSphereEventBus.getInstance().post(new RuleConfigurationsAlteredEvent(schemaName,
+                ProxyContext.getInstance().getMetaData(schemaName).getRuleMetaData().getConfigurations()));
         // TODO Need to get the executed feedback from registry center for returning.
     }
 }
