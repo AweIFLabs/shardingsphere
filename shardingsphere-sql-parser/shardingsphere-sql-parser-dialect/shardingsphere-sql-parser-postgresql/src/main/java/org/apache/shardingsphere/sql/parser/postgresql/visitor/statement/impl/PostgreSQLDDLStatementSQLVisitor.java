@@ -22,6 +22,7 @@ import org.apache.shardingsphere.sql.parser.api.visitor.ASTNode;
 import org.apache.shardingsphere.sql.parser.api.visitor.operation.SQLStatementVisitor;
 import org.apache.shardingsphere.sql.parser.api.visitor.type.DDLSQLVisitor;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.AddColumnSpecificationContext;
+import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.AddConstraintSpecificationContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.AlterDefinitionClauseContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.AlterFunctionContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.AlterIndexContext;
@@ -45,6 +46,7 @@ import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.Cr
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.CreateViewContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.DeallocateContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.DropColumnSpecificationContext;
+import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.DropConstraintSpecificationContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.DropDatabaseContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.DropFunctionContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.DropIndexContext;
@@ -53,16 +55,21 @@ import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.Dr
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.DropTableContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.DropTablespaceContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.DropViewContext;
+import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.IndexElemContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.IndexNameContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.IndexNamesContext;
+import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.IndexParamsContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.ModifyColumnSpecificationContext;
+import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.ModifyConstraintSpecificationContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.PrepareContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.RenameColumnSpecificationContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.RenameTableSpecificationContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.TableConstraintContext;
+import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.TableConstraintUsingIndexContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.TableNameClauseContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.TableNamesClauseContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.TruncateTableContext;
+import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.ValidateConstraintSpecificationContext;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.AlterDefinitionSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.CreateDefinitionSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.column.ColumnDefinitionSegment;
@@ -71,11 +78,17 @@ import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.column.alter.
 import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.column.alter.ModifyColumnDefinitionSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.column.alter.RenameColumnSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.constraint.ConstraintDefinitionSegment;
+import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.constraint.ConstraintSegment;
+import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.constraint.alter.AddConstraintDefinitionSegment;
+import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.constraint.alter.DropConstraintDefinitionSegment;
+import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.constraint.alter.ModifyConstraintDefinitionSegment;
+import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.constraint.alter.ValidateConstraintDefinitionSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.index.IndexSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.table.RenameTableDefinitionSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.column.ColumnSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.DataTypeSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.table.SimpleTableSegment;
+import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.table.TableNameSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.dml.DeleteStatement;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.dml.InsertStatement;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.dml.SelectStatement;
@@ -170,8 +183,14 @@ public final class PostgreSQLDDLStatementSQLVisitor extends PostgreSQLStatementS
                     result.getModifyColumnDefinitions().add((ModifyColumnDefinitionSegment) each);
                 } else if (each instanceof DropColumnDefinitionSegment) {
                     result.getDropColumnDefinitions().add((DropColumnDefinitionSegment) each);
-                } else if (each instanceof ConstraintDefinitionSegment) {
-                    result.getAddConstraintDefinitions().add((ConstraintDefinitionSegment) each);
+                } else if (each instanceof AddConstraintDefinitionSegment) {
+                    result.getAddConstraintDefinitions().add((AddConstraintDefinitionSegment) each);
+                } else if (each instanceof ValidateConstraintDefinitionSegment) {
+                    result.getValidateConstraintDefinitions().add((ValidateConstraintDefinitionSegment) each);
+                } else if (each instanceof ModifyConstraintDefinitionSegment) {
+                    result.getModifyConstraintDefinitions().add((ModifyConstraintDefinitionSegment) each);
+                } else if (each instanceof DropConstraintDefinitionSegment) {
+                    result.getDropConstraintDefinitions().add((DropConstraintDefinitionSegment) each);
                 } else if (each instanceof RenameTableDefinitionSegment) {
                     result.setRenameTable(((RenameTableDefinitionSegment) each).getRenameTable());
                 }
@@ -191,13 +210,22 @@ public final class PostgreSQLDDLStatementSQLVisitor extends PostgreSQLStatementS
                     result.getValue().addAll(((CollectionValue<AddColumnDefinitionSegment>) visit(addColumnSpecification)).getValue());
                 }
                 if (null != each.addConstraintSpecification() && null != each.addConstraintSpecification().tableConstraint()) {
-                    result.getValue().add((ConstraintDefinitionSegment) visit(each.addConstraintSpecification().tableConstraint()));
+                    result.getValue().add((AddConstraintDefinitionSegment) visit(each.addConstraintSpecification()));
+                }
+                if (null != each.validateConstraintSpecification()) {
+                    result.getValue().add((ValidateConstraintDefinitionSegment) visit(each.validateConstraintSpecification()));
                 }
                 if (null != each.modifyColumnSpecification()) {
                     result.getValue().add((ModifyColumnDefinitionSegment) visit(each.modifyColumnSpecification()));
                 }
+                if (null != each.modifyConstraintSpecification()) {
+                    result.getValue().add((ModifyConstraintDefinitionSegment) visit(each.modifyConstraintSpecification()));
+                }
                 if (null != each.dropColumnSpecification()) {
                     result.getValue().add((DropColumnDefinitionSegment) visit(each.dropColumnSpecification()));
+                }
+                if (null != each.dropConstraintSpecification()) {
+                    result.getValue().add((DropConstraintDefinitionSegment) visit(each.dropConstraintSpecification()));
                 }
             }
         }
@@ -208,9 +236,30 @@ public final class PostgreSQLDDLStatementSQLVisitor extends PostgreSQLStatementS
     }
     
     @Override
+    public ASTNode visitAddConstraintSpecification(final AddConstraintSpecificationContext ctx) {
+        return new AddConstraintDefinitionSegment(ctx.getStart().getStartIndex(), ctx.getStop().getStopIndex(), (ConstraintDefinitionSegment) visit(ctx.tableConstraint()));
+    }
+    
+    @Override
+    public ASTNode visitValidateConstraintSpecification(final ValidateConstraintSpecificationContext ctx) {
+        return new ValidateConstraintDefinitionSegment(ctx.getStart().getStartIndex(), ctx.getStop().getStopIndex(), (ConstraintSegment) visit(ctx.constraintName()));
+    }
+    
+    @Override
+    public ASTNode visitModifyConstraintSpecification(final ModifyConstraintSpecificationContext ctx) {
+        return new ModifyConstraintDefinitionSegment(ctx.getStart().getStartIndex(), ctx.getStop().getStopIndex(), (ConstraintSegment) visit(ctx.constraintName()));
+    }
+    
+    @Override
+    public ASTNode visitDropConstraintSpecification(final DropConstraintSpecificationContext ctx) {
+        return new DropConstraintDefinitionSegment(ctx.getStart().getStartIndex(), ctx.getStop().getStopIndex(), (ConstraintSegment) visit(ctx.constraintName()));
+    }
+    
+    @Override
     public ASTNode visitRenameTableSpecification(final RenameTableSpecificationContext ctx) {
         RenameTableDefinitionSegment result = new RenameTableDefinitionSegment(ctx.start.getStartIndex(), ctx.stop.getStopIndex());
-        result.setRenameTable(new SimpleTableSegment(ctx.identifier().start.getStartIndex(), ctx.identifier().stop.getStopIndex(), (IdentifierValue) visit(ctx.identifier())));
+        TableNameSegment tableName = new TableNameSegment(ctx.identifier().start.getStartIndex(), ctx.identifier().stop.getStopIndex(), (IdentifierValue) visit(ctx.identifier()));
+        result.setRenameTable(new SimpleTableSegment(tableName));
         return result;
     }
     
@@ -250,10 +299,25 @@ public final class PostgreSQLDDLStatementSQLVisitor extends PostgreSQLStatementS
         return false;
     }
     
+    @Override
+    public ASTNode visitTableConstraintUsingIndex(final TableConstraintUsingIndexContext ctx) {
+        ConstraintDefinitionSegment result = new ConstraintDefinitionSegment(ctx.getStart().getStartIndex(), ctx.getStop().getStopIndex());
+        if (null != ctx.constraintName()) {
+            result.setConstraintName((ConstraintSegment) visit(ctx.constraintName()));
+        }
+        if (null != ctx.indexName()) {
+            result.setIndexName((IndexSegment) visit(ctx.indexName()));
+        }
+        return result;
+    }
+    
     @SuppressWarnings("unchecked")
     @Override
     public ASTNode visitTableConstraint(final TableConstraintContext ctx) {
         ConstraintDefinitionSegment result = new ConstraintDefinitionSegment(ctx.getStart().getStartIndex(), ctx.getStop().getStopIndex());
+        if (null != ctx.constraintClause()) {
+            result.setConstraintName((ConstraintSegment) visit(ctx.constraintClause().constraintName()));
+        }
         if (null != ctx.tableConstraintOption().primaryKey()) {
             result.getPrimaryKeyColumns().addAll(((CollectionValue<ColumnSegment>) visit(ctx.tableConstraintOption().columnNames(0))).getValue());
         }
@@ -299,12 +363,27 @@ public final class PostgreSQLDDLStatementSQLVisitor extends PostgreSQLStatementS
         return result;
     }
     
+    @SuppressWarnings("unchecked")
     @Override
     public ASTNode visitCreateIndex(final CreateIndexContext ctx) {
         PostgreSQLCreateIndexStatement result = new PostgreSQLCreateIndexStatement();
         result.setTable((SimpleTableSegment) visit(ctx.tableName()));
+        result.setColumns(((CollectionValue<ColumnSegment>) visit(ctx.indexParams())).getValue());
         if (null != ctx.indexName()) {
             result.setIndex((IndexSegment) visit(ctx.indexName()));
+        } else {
+            result.setGeneratedIndexStartIndex(ctx.ON().getSymbol().getStartIndex() - 1);
+        }
+        return result;
+    }
+    
+    @Override
+    public ASTNode visitIndexParams(final IndexParamsContext ctx) {
+        CollectionValue<ColumnSegment> result = new CollectionValue<>();
+        for (IndexElemContext each : ctx.indexElem()) {
+            if (null != each.colId()) {
+                result.getValue().add(new ColumnSegment(each.colId().start.getStartIndex(), each.colId().stop.getStopIndex(), new IdentifierValue(each.colId().getText())));
+            }
         }
         return result;
     }

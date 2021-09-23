@@ -17,15 +17,10 @@
 
 package org.apache.shardingsphere.distsql.parser.api;
 
-import org.antlr.v4.runtime.BailErrorStrategy;
-import org.antlr.v4.runtime.Parser;
-import org.antlr.v4.runtime.atn.PredictionMode;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
-import org.antlr.v4.runtime.tree.ErrorNode;
-import org.apache.shardingsphere.distsql.parser.core.DistSQLParserFactory;
-import org.apache.shardingsphere.distsql.parser.core.DistSQLVisitor;
-import org.apache.shardingsphere.sql.parser.api.parser.SQLParser;
-import org.apache.shardingsphere.sql.parser.core.parser.ParseASTNode;
+import org.apache.shardingsphere.distsql.parser.core.advanced.AdvancedDistSQLStatementParserEngine;
+import org.apache.shardingsphere.distsql.parser.core.common.CommonDistSQLStatementParserEngine;
+import org.apache.shardingsphere.distsql.parser.core.featured.FeaturedDistSQLStatementParserEngine;
 import org.apache.shardingsphere.sql.parser.exception.SQLParsingException;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.SQLStatement;
 
@@ -38,34 +33,17 @@ public final class DistSQLStatementParserEngine {
      * Parse SQL.
      *
      * @param sql SQL to be parsed
-     * @return AST node
+     * @return SQL statement
      */
     public SQLStatement parse(final String sql) {
-        ParseASTNode parseASTNode = twoPhaseParse(sql);
-        if (parseASTNode.getRootNode() instanceof ErrorNode) {
-            throw new SQLParsingException("Unsupported SQL of `%s`", sql);
-        }
-        return (SQLStatement) new DistSQLVisitor().visit(parseASTNode.getRootNode());
-    }
-    
-    private ParseASTNode twoPhaseParse(final String sql) {
-        SQLParser sqlParser = DistSQLParserFactory.newInstance(sql);
         try {
-            setPredictionMode((Parser) sqlParser, PredictionMode.SLL);
-            return (ParseASTNode) sqlParser.parse();
-        } catch (final ParseCancellationException ex) {
-            ((Parser) sqlParser).reset();
-            setPredictionMode((Parser) sqlParser, PredictionMode.LL);
+            return new CommonDistSQLStatementParserEngine().parse(sql);
+        } catch (final ParseCancellationException | SQLParsingException ignored) {
             try {
-                return (ParseASTNode) sqlParser.parse();
-            } catch (final ParseCancellationException e) {
-                throw new SQLParsingException("You have an error in your SQL syntax");
+                return new FeaturedDistSQLStatementParserEngine().parse(sql);
+            } catch (SQLParsingException ignoredToo) {
+                return new AdvancedDistSQLStatementParserEngine().parse(sql);
             }
         }
-    }
-    
-    private void setPredictionMode(final Parser sqlParser, final PredictionMode mode) {
-        sqlParser.setErrorHandler(new BailErrorStrategy());
-        sqlParser.getInterpreter().setPredictionMode(mode);
     }
 }

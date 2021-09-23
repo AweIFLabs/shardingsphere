@@ -57,8 +57,7 @@ HintManager hintManager = HintManager.getInstance();
 - Use `hintManager.addDatabaseShardingValue` to add sharding key value of data source.
 - Use `hintManager.addTableShardingValue` to add sharding key value of table.
 
-> Users can use `hintManager.setDatabaseShardingValue` to add sharding in hint route to some certain sharding database without sharding tables. 
-After that, SQL parse and rewrite phase will be skipped and the overall enforcement efficiency can be enhanced.
+> Users can use `hintManager.setDatabaseShardingValue` to add sharding in hint route to some certain sharding database without sharding tables.
 
 #### Clean Hint Values
 
@@ -105,7 +104,7 @@ Be the same as sharding based on hint.
 
 #### Configure Primary Database Route
 
-- Use `hintManager.setPrimaryRouteOnly` to configure primary database route.
+- Use `hintManager.setWriteRouteOnly` to configure primary database route.
 
 #### Clean Hint Value
 
@@ -115,11 +114,10 @@ Be the same as data sharding based on hint.
 
 ```java
 String sql = "SELECT * FROM t_order";
-try (
-        HintManager hintManager = HintManager.getInstance();
-        Connection conn = dataSource.getConnection();
-        PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-    hintManager.setPrimaryRouteOnly();
+try (HintManager hintManager = HintManager.getInstance();
+     Connection conn = dataSource.getConnection();
+     PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+    hintManager.setWriteRouteOnly();
     try (ResultSet rs = preparedStatement.executeQuery()) {
         while (rs.next()) {
             // ...

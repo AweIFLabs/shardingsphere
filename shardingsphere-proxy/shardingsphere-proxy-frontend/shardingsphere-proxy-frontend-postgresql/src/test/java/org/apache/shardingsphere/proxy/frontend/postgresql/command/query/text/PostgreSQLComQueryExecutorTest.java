@@ -30,6 +30,7 @@ import org.apache.shardingsphere.proxy.backend.response.header.query.impl.QueryH
 import org.apache.shardingsphere.proxy.backend.response.header.update.UpdateResponseHeader;
 import org.apache.shardingsphere.proxy.backend.text.TextProtocolBackendHandler;
 import org.apache.shardingsphere.proxy.frontend.command.executor.ResponseType;
+import org.apache.shardingsphere.proxy.frontend.postgresql.command.PostgreSQLConnectionContext;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.dml.InsertStatement;
 import org.junit.Before;
 import org.junit.Test;
@@ -46,7 +47,6 @@ import java.util.Collections;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -55,6 +55,9 @@ import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public final class PostgreSQLComQueryExecutorTest {
+    
+    @Mock
+    private PostgreSQLConnectionContext connectionContext;
     
     @Mock
     private TextProtocolBackendHandler textProtocolBackendHandler;
@@ -66,7 +69,7 @@ public final class PostgreSQLComQueryExecutorTest {
         PostgreSQLComQueryPacket queryPacket = mock(PostgreSQLComQueryPacket.class);
         BackendConnection backendConnection = mock(BackendConnection.class);
         when(queryPacket.getSql()).thenReturn("");
-        queryExecutor = new PostgreSQLComQueryExecutor(queryPacket, backendConnection);
+        queryExecutor = new PostgreSQLComQueryExecutor(connectionContext, queryPacket, backendConnection);
         setMockFieldIntoExecutor(queryExecutor);
     }
     
@@ -85,8 +88,9 @@ public final class PostgreSQLComQueryExecutorTest {
         QueryResponseHeader queryResponseHeader = mock(QueryResponseHeader.class);
         when(textProtocolBackendHandler.execute()).thenReturn(queryResponseHeader);
         Collection<DatabasePacket<?>> actual = queryExecutor.execute();
-        assertTrue(actual.isEmpty());
-        assertNull(queryExecutor.getResponseType());
+        assertThat(actual.size(), is(1));
+        assertThat(actual.iterator().next(), is(instanceOf(PostgreSQLRowDescriptionPacket.class)));
+        assertThat(queryExecutor.getResponseType(), is(ResponseType.QUERY));
         verify(queryResponseHeader).getQueryHeaders();
     }
     

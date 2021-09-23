@@ -112,11 +112,7 @@ literalsType
     ;
 
 identifier
-    : unicodeEscapes? IDENTIFIER_ uescape? |  unreservedWord 
-    ;
-
-unicodeEscapes
-    : ('U' | 'u') AMPERSAND_
+    : UNICODE_ESCAPE? IDENTIFIER_ uescape? |  unreservedWord 
     ;
 
 uescape
@@ -488,6 +484,10 @@ indexName
     : identifier
     ;
 
+constraintName
+    : identifier
+    ;
+
 alias
     : identifier
     ;
@@ -496,8 +496,12 @@ primaryKey
     : PRIMARY? KEY
     ;
 
-logicalOperator
-    : OR | OR_ | AND | AND_
+andOperator
+    : AND | AND_
+    ;
+
+orOperator
+    : OR | OR_
     ;
 
 comparisonOperator
@@ -575,7 +579,8 @@ aExpr
     | aExpr IS unicodeNormalForm NORMALIZED
     | aExpr IS NOT NORMALIZED
     | aExpr IS NOT unicodeNormalForm NORMALIZED
-    | aExpr logicalOperator aExpr
+    | aExpr andOperator aExpr
+    | aExpr orOperator aExpr
     | DEFAULT
     ;
 

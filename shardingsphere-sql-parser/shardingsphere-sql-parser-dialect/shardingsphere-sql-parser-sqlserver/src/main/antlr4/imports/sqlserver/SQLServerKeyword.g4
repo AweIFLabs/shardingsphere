@@ -371,6 +371,10 @@ EXECUTE
     : E X E C U T E
     ;
 
+EXEC
+    : E X E C
+    ;
+
 SESSION
     : S E S S I O N
     ;
@@ -1069,4 +1073,244 @@ FILTER_COLUMN
 
 RETENTION_PERIOD
     : R E T E N T I O N UL_ P E R I O D
+    ;
+
+CONTAINMENT
+    : C O N T A I N M E N T
+    ;
+
+PARTIAL
+    : P A R T I A L
+    ;
+
+FILENAME
+    : F I L E N A M E
+    ;
+
+SIZE
+    : S I Z E
+    ;
+
+MAXSIZE
+    : M A X S I Z E
+    ;
+
+FILEGROWTH
+    : F I L E G R O W T H
+    ;
+
+UNLIMITED
+    : U N L I M I T E D
+    ;
+
+KB
+    : K B
+    ;
+
+MB
+    : M B
+    ;
+
+GB
+    : G B
+    ;
+
+TB
+    : T B
+    ;
+
+CONTAINS
+    : C O N T A I N S
+    ;
+
+MEMORY_OPTIMIZED_DATA
+    : M E M O R Y UL_ O P T I M I Z E D UL_ D A T A
+    ;
+
+FILEGROUP
+    : F I L E G R O U P
+    ;
+
+NON_TRANSACTED_ACCESS
+    : N O N UL_ T R A N S A C T E D UL_ A C C E S S
+    ;
+
+DB_CHAINING
+    : D B UL_ C H A I N I N G
+    ;
+
+TRUSTWORTHY
+    : T R U S T W O R T H Y
+    ;
+
+FORWARD_ONLY
+    : F O R W A R D UL_ O N L Y
+    ;
+
+SCROLL
+    : S C R O L L
+    ;
+
+STATIC
+    : S T A T I C
+    ;
+
+KEYSET
+    : K E Y S E T
+    ;
+
+DYNAMIC
+    : D Y N A M I C
+    ;
+
+FAST_FORWARD
+    : F A S T UL_ F O R W A R D
+    ;
+
+READ_ONLY
+    : R E A D UL_ O N L Y
+    ;
+
+SCROLL_LOCKS
+    : S C R O L L UL_ L O C K S
+    ;
+
+OPTIMISTIC
+    : O P T I M I S T I C
+    ;
+
+TYPE_WARNING
+    : T Y P E UL_ W A R N I N G
+    ;
+
+SCHEMABINDING
+    : S C H E M A B I N D I N G
+    ;
+
+CALLER
+    : C A L L E R
+    ;
+
+INPUT
+    : I N P U T
+    ;
+
+CALLED
+    : C A L L E D
+    ;
+
+VARYING
+    : V A R Y I N G
+    ;
+
+OUT
+    : O U T
+    ;
+
+OWNER
+    : O W N E R
+    ;
+
+ATOMIC
+    : A T O M I C
+    ;
+
+LANGUAGE
+    : L A N G U A G E
+    ;
+
+LEVEL
+    : L E V E L
+    ;
+
+ISOLATION
+    : I S O L A T I O N
+    ;
+
+SNAPSHOT
+    : S N A P S H O T
+    ;
+
+REPEATABLE
+    : R E P E A T A B L E
+    ;
+
+READ
+    : R E A D
+    ;
+
+SERIALIZABLE
+    : S E R I A L I Z A B L E
+    ;
+
+NATIVE_COMPILATION
+    : N A T I V E UL_ C O M P I L A T I O N
+    ;
+
+VIEW_METADATA
+    : V I E W UL_ M E T A D A T A
+    ;
+
+AFTER
+    : A F T E R
+    ;
+
+INSTEAD
+    : I N S T E A D
+    ;
+
+APPEND
+    : A P P E N D
+    ;
+
+INCREMENT
+    : I N C R E M E N T
+    ;
+
+CYCLE
+    : C Y C L E
+    ;
+
+CACHE
+    : C A C H E
+    ;
+
+MINVALUE
+    : M I N V A L U E
+    ;
+
+MAXVALUE
+    : M A X V A L U E
+    ;
+
+RESTART
+    : R E S T A R T
+    ;
+
+LOB_COMPACTION
+    : L O B UL_ C O M P A C T I O N
+    ;
+
+COMPRESS_ALL_ROW_GROUPS
+    : C O M P R E S S UL_ A L L UL_ R O W UL_ G R O U P S
+    ;
+
+REORGANIZE
+    : R E O R G A N I Z E
+    ;
+
+RESUME
+    : R E S U M E
+    ;
+
+PAUSE
+    : P A U S E
+    ;
+
+ABORT
+    : A B O R T
+    ;
+
+INCLUDE
+    : I N C L U D E
     ;

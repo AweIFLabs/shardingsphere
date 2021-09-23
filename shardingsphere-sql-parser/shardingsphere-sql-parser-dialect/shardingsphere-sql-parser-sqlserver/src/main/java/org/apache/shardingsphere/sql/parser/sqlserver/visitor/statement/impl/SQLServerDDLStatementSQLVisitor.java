@@ -18,23 +18,34 @@
 package org.apache.shardingsphere.sql.parser.sqlserver.visitor.statement.impl;
 
 import lombok.NoArgsConstructor;
-import org.apache.shardingsphere.sql.parser.api.visitor.operation.SQLStatementVisitor;
 import org.apache.shardingsphere.sql.parser.api.visitor.ASTNode;
+import org.apache.shardingsphere.sql.parser.api.visitor.operation.SQLStatementVisitor;
 import org.apache.shardingsphere.sql.parser.api.visitor.type.DDLSQLVisitor;
 import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.AddColumnSpecificationContext;
+import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.AlterCheckConstraintContext;
 import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.AlterColumnAddOptionContext;
 import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.AlterDefinitionClauseContext;
 import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.AlterIndexContext;
+import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.AlterSequenceContext;
 import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.AlterTableContext;
+import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.AlterTableDropConstraintContext;
+import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.AlterTriggerContext;
 import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.ColumnConstraintContext;
 import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.ColumnDefinitionContext;
 import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.ColumnDefinitionOptionContext;
 import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.ColumnNameContext;
+import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.CreateDatabaseContext;
 import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.CreateDefinitionClauseContext;
+import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.CreateFunctionContext;
 import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.CreateIndexContext;
+import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.CreateProcedureContext;
+import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.CreateSequenceContext;
 import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.CreateTableContext;
 import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.CreateTableDefinitionContext;
+import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.CreateTriggerContext;
+import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.CreateViewContext;
 import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.DropColumnSpecificationContext;
+import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.DropConstraintNameContext;
 import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.DropIndexContext;
 import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.DropTableContext;
 import org.apache.shardingsphere.sql.parser.autogen.SQLServerStatementParser.ModifyColumnSpecificationContext;
@@ -47,18 +58,31 @@ import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.column.alter.
 import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.column.alter.DropColumnDefinitionSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.column.alter.ModifyColumnDefinitionSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.constraint.ConstraintDefinitionSegment;
+import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.constraint.ConstraintSegment;
+import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.constraint.alter.AddConstraintDefinitionSegment;
+import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.constraint.alter.DropConstraintDefinitionSegment;
+import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.constraint.alter.ModifyConstraintDefinitionSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.index.IndexSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.column.ColumnSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.DataTypeSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.table.SimpleTableSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.value.collection.CollectionValue;
 import org.apache.shardingsphere.sql.parser.sql.dialect.statement.sqlserver.ddl.SQLServerAlterIndexStatement;
+import org.apache.shardingsphere.sql.parser.sql.dialect.statement.sqlserver.ddl.SQLServerAlterSequenceStatement;
 import org.apache.shardingsphere.sql.parser.sql.dialect.statement.sqlserver.ddl.SQLServerAlterTableStatement;
+import org.apache.shardingsphere.sql.parser.sql.dialect.statement.sqlserver.ddl.SQLServerAlterTriggerStatement;
+import org.apache.shardingsphere.sql.parser.sql.dialect.statement.sqlserver.ddl.SQLServerCreateDatabaseStatement;
+import org.apache.shardingsphere.sql.parser.sql.dialect.statement.sqlserver.ddl.SQLServerCreateFunctionStatement;
 import org.apache.shardingsphere.sql.parser.sql.dialect.statement.sqlserver.ddl.SQLServerCreateIndexStatement;
+import org.apache.shardingsphere.sql.parser.sql.dialect.statement.sqlserver.ddl.SQLServerCreateProcedureStatement;
+import org.apache.shardingsphere.sql.parser.sql.dialect.statement.sqlserver.ddl.SQLServerCreateSequenceStatement;
 import org.apache.shardingsphere.sql.parser.sql.dialect.statement.sqlserver.ddl.SQLServerCreateTableStatement;
+import org.apache.shardingsphere.sql.parser.sql.dialect.statement.sqlserver.ddl.SQLServerCreateTriggerStatement;
+import org.apache.shardingsphere.sql.parser.sql.dialect.statement.sqlserver.ddl.SQLServerCreateViewStatement;
 import org.apache.shardingsphere.sql.parser.sql.dialect.statement.sqlserver.ddl.SQLServerDropIndexStatement;
 import org.apache.shardingsphere.sql.parser.sql.dialect.statement.sqlserver.ddl.SQLServerDropTableStatement;
 import org.apache.shardingsphere.sql.parser.sql.dialect.statement.sqlserver.ddl.SQLServerTruncateStatement;
+import org.apache.shardingsphere.sql.parser.sql.dialect.statement.sqlserver.dml.SQLServerSelectStatement;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -149,6 +173,9 @@ public final class SQLServerDDLStatementSQLVisitor extends SQLServerStatementSQL
     @Override
     public ASTNode visitTableConstraint(final TableConstraintContext ctx) {
         ConstraintDefinitionSegment result = new ConstraintDefinitionSegment(ctx.getStart().getStartIndex(), ctx.getStop().getStopIndex());
+        if (null != ctx.constraintName()) {
+            result.setConstraintName((ConstraintSegment) visit(ctx.constraintName()));
+        }
         if (null != ctx.tablePrimaryConstraint() && null != ctx.tablePrimaryConstraint().primaryKeyUnique().primaryKey()) {
             if (null != ctx.tablePrimaryConstraint().diskTablePrimaryConstraintOption()) {
                 result.getPrimaryKeyColumns().addAll(((CollectionValue<ColumnSegment>) visit(ctx.tablePrimaryConstraint().diskTablePrimaryConstraintOption().columnNames())).getValue());
@@ -176,8 +203,12 @@ public final class SQLServerDDLStatementSQLVisitor extends SQLServerStatementSQL
                     result.getModifyColumnDefinitions().add((ModifyColumnDefinitionSegment) each);
                 } else if (each instanceof DropColumnDefinitionSegment) {
                     result.getDropColumnDefinitions().add((DropColumnDefinitionSegment) each);
-                } else if (each instanceof ConstraintDefinitionSegment) {
-                    result.getAddConstraintDefinitions().add((ConstraintDefinitionSegment) each);
+                } else if (each instanceof AddConstraintDefinitionSegment) {
+                    result.getAddConstraintDefinitions().add((AddConstraintDefinitionSegment) each);
+                } else if (each instanceof ModifyConstraintDefinitionSegment) {
+                    result.getModifyConstraintDefinitions().add((ModifyConstraintDefinitionSegment) each);
+                } else if (each instanceof DropConstraintDefinitionSegment) {
+                    result.getDropConstraintDefinitions().add((DropConstraintDefinitionSegment) each);
                 }
             }
         }
@@ -196,6 +227,12 @@ public final class SQLServerDDLStatementSQLVisitor extends SQLServerStatementSQL
         }
         if (null != ctx.alterDrop() && null != ctx.alterDrop().dropColumnSpecification()) {
             result.getValue().add((DropColumnDefinitionSegment) visit(ctx.alterDrop().dropColumnSpecification()));
+        }
+        if (null != ctx.alterDrop() && null != ctx.alterDrop().alterTableDropConstraint()) {
+            result.combine((CollectionValue<AlterDefinitionSegment>) visit(ctx.alterDrop().alterTableDropConstraint()));
+        }
+        if (null != ctx.alterCheckConstraint()) {
+            result.getValue().add((AlterDefinitionSegment) visit(ctx.alterCheckConstraint()));
         }
         return result;
     }
@@ -275,5 +312,64 @@ public final class SQLServerDDLStatementSQLVisitor extends SQLServerStatementSQL
         result.setTable((SimpleTableSegment) visit(ctx.tableName()));
         result.setContainsExistClause(null != ctx.ifExist());
         return result;
+    }
+    
+    @Override
+    public ASTNode visitAlterCheckConstraint(final AlterCheckConstraintContext ctx) {
+        return new ModifyConstraintDefinitionSegment(ctx.getStart().getStartIndex(), ctx.getStop().getStopIndex(), (ConstraintSegment) visit(ctx.constraintName()));
+    }
+    
+    @Override
+    public ASTNode visitAlterTableDropConstraint(final AlterTableDropConstraintContext ctx) {
+        CollectionValue<DropConstraintDefinitionSegment> result = new CollectionValue<>();
+        for (DropConstraintNameContext each : ctx.dropConstraintName()) {
+            result.getValue().add(new DropConstraintDefinitionSegment(ctx.getStart().getStartIndex(), ctx.getStop().getStopIndex(), (ConstraintSegment) visit(each.constraintName())));
+        }
+        return result;
+    }
+
+    @Override
+    public ASTNode visitCreateDatabase(final CreateDatabaseContext ctx) {
+        SQLServerCreateDatabaseStatement result = new SQLServerCreateDatabaseStatement();
+        result.setDatabaseName(ctx.databaseName().getText());
+        return result;
+    }
+
+    @Override
+    public ASTNode visitCreateFunction(final CreateFunctionContext ctx) {
+        return new SQLServerCreateFunctionStatement();
+    }
+
+    @Override
+    public ASTNode visitCreateProcedure(final CreateProcedureContext ctx) {
+        return new SQLServerCreateProcedureStatement();
+    }
+
+    @Override
+    public ASTNode visitCreateView(final CreateViewContext ctx) {
+        SQLServerCreateViewStatement result = new SQLServerCreateViewStatement();
+        result.setView((SimpleTableSegment) visit(ctx.viewName()));
+        result.setSelect((SQLServerSelectStatement) visit(ctx.createViewClause().select()));
+        return result;
+    }
+
+    @Override
+    public ASTNode visitCreateTrigger(final CreateTriggerContext ctx) {
+        return new SQLServerCreateTriggerStatement();
+    }
+
+    @Override
+    public ASTNode visitCreateSequence(final CreateSequenceContext ctx) {
+        return new SQLServerCreateSequenceStatement();
+    }
+
+    @Override
+    public ASTNode visitAlterTrigger(final AlterTriggerContext ctx) {
+        return new SQLServerAlterTriggerStatement();
+    }
+
+    @Override
+    public ASTNode visitAlterSequence(final AlterSequenceContext ctx) {
+        return new SQLServerAlterSequenceStatement();
     }
 }

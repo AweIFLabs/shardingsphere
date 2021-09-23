@@ -17,14 +17,38 @@
 
 grammar DDLStatement;
 
-import Symbol, Keyword, SQLServerKeyword, Literals, BaseRule;
+import Symbol, Keyword, SQLServerKeyword, Literals, BaseRule, DMLStatement;
 
 createTable
     : CREATE TABLE tableName fileTableClause createDefinitionClause
     ;
 
 createIndex
-    : CREATE createIndexSpecification INDEX indexName ON tableName columnNamesWithSort
+    : CREATE createIndexSpecification INDEX indexName ON tableName columnNamesWithSort createIndexClause
+    ;
+
+createDatabase
+    : CREATE DATABASE databaseName createDatabaseClause
+    ;
+
+createFunction
+    : CREATE (OR ALTER)? FUNCTION functionName funcParameters funcReturns
+    ;
+
+createProcedure
+    : CREATE (OR ALTER)? (PROC | PROCEDURE) procedureName procParameters createProcClause
+    ;
+
+createView
+    : CREATE (OR ALTER)? VIEW viewName createViewClause
+    ;
+
+createTrigger
+    : CREATE (OR ALTER)? TRIGGER triggerName ON triggerTarget createTriggerClause
+    ;
+
+createSequence
+    : CREATE SEQUENCE sequenceName createOrAlterSequenceClause*
     ;
 
 alterTable
@@ -32,7 +56,15 @@ alterTable
     ;
 
 alterIndex
-    : ALTER INDEX (indexName | ALL) ON tableName
+    : ALTER INDEX (indexName | ALL) ON tableName alterIndexClause
+    ;
+
+alterTrigger
+    : ALTER TRIGGER triggerName ON triggerTarget createTriggerClause
+    ;
+
+alterSequence
+    : ALTER SEQUENCE sequenceName createOrAlterSequenceClause*
     ;
 
 dropTable
@@ -88,11 +120,11 @@ encryptedOptions
     ;
 
 columnConstraint
-    : (CONSTRAINT ignoredIdentifier)? (primaryKeyConstraint | columnForeignKeyConstraint | checkConstraint)
+    : (CONSTRAINT constraintName)? (primaryKeyConstraint | columnForeignKeyConstraint | checkConstraint)
     ;
 
 computedColumnConstraint
-    : (CONSTRAINT ignoredIdentifier)? (primaryKeyConstraint | computedColumnForeignKeyConstraint | checkConstraint)
+    : (CONSTRAINT constraintName)? (primaryKeyConstraint | computedColumnForeignKeyConstraint | checkConstraint)
     ;
 
 computedColumnForeignKeyConstraint
@@ -193,7 +225,7 @@ columnSetDefinition
     ;
 
 tableConstraint 
-    : (CONSTRAINT ignoredIdentifier)? (tablePrimaryConstraint | tableForeignKeyConstraint | checkConstraint)
+    : (CONSTRAINT constraintName)? (tablePrimaryConstraint | tableForeignKeyConstraint | checkConstraint)
     ;
 
 tablePrimaryConstraint
@@ -300,7 +332,7 @@ createIndexSpecification
     ;
 
 alterDefinitionClause
-    : addColumnSpecification | modifyColumnSpecification | alterDrop | alterCheckConstraint | alterTrigger | alterSwitch | alterSet | alterTableOption | REBUILD
+    : addColumnSpecification | modifyColumnSpecification | alterDrop | alterCheckConstraint | alterTableTrigger | alterSwitch | alterSet | alterTableOption | REBUILD
     ;
 
 addColumnSpecification
@@ -329,7 +361,7 @@ alterColumnAddOption
     ;
 
 constraintForColumn
-    : (CONSTRAINT ignoredIdentifier)? DEFAULT simpleExpr FOR columnName
+    : (CONSTRAINT constraintName)? DEFAULT simpleExpr FOR columnName
     ;
 
 generatedColumnNamesClause
@@ -353,7 +385,7 @@ alterTableDropConstraint
     ;
 
 dropConstraintName
-    : ignoredIdentifier dropConstraintWithClause?
+    : constraintName dropConstraintWithClause?
     ;
 
 dropConstraintWithClause
@@ -377,10 +409,10 @@ dropIndexSpecification
     ;
 
 alterCheckConstraint 
-    : WITH? (CHECK | NOCHECK) CONSTRAINT (ALL | ignoredIdentifiers)
+    : WITH? (CHECK | NOCHECK) CONSTRAINT (ALL | constraintName)
     ;
 
-alterTrigger 
+alterTableTrigger
     : (ENABLE| DISABLE) TRIGGER (ALL | ignoredIdentifiers)
     ;
 
@@ -449,4 +481,310 @@ onHistoryTableClause
 
 ifExist
     : IF EXISTS
+    ;
+
+createDatabaseClause
+    : (CONTAINMENT EQ_ (NONE | PARTIAL))? fileDefinitionClause? (COLLATE ignoredIdentifier)? (WITH databaseOption (COMMA_ databaseOption)*)?
+    ;
+
+fileDefinitionClause
+    : ON PRIMARY? fileSpec (COMMA_ fileSpec)* (COMMA_ databaseFileGroup)* databaseLogOns
+    ;
+
+databaseOption
+    : FILESTREAM fileStreamOption (COMMA_ fileStreamOption)*
+    | DEFAULT_FULLTEXT_LANGUAGE = ignoredIdentifier
+    | DEFAULT_LANGUAGE = ignoredIdentifier
+    | NESTED_TRIGGERS = ( OFF | ON )
+    | TRANSFORM_NOISE_WORDS = ( OFF | ON )
+    | TWO_DIGIT_YEAR_CUTOFF = ignoredIdentifier
+    | DB_CHAINING ( OFF | ON )
+    | TRUSTWORTHY ( OFF | ON )
+    | PERSISTENT_LOG_BUFFER=ON ( DIRECTORY_NAME=ignoredIdentifier )
+    ;
+
+fileStreamOption
+    : NON_TRANSACTED_ACCESS EQ_ ( OFF | READ_ONLY | FULL )
+    | DIRECTORY_NAME = ignoredIdentifier
+    ;
+
+fileSpec
+    : LP_ NAME EQ_ ignoredIdentifier COMMA_ FILENAME EQ_ STRING_ databaseFileSpecOption RP_
+    ;
+
+databaseFileSpecOption
+    : (COMMA_ SIZE EQ_ numberLiterals (KB | MB | GB | TB)?)?
+    (COMMA_ MAXSIZE EQ_ (numberLiterals (KB | MB | GB | TB)? | UNLIMITED))?
+    (COMMA_ FILEGROWTH EQ_ numberLiterals (KB | MB | GB | TB | MOD_)?)?
+    ;
+
+databaseFileGroup
+    : FILEGROUP ignoredIdentifier databaseFileGroupContains? fileSpec (COMMA_ fileSpec)*
+    ;
+
+databaseFileGroupContains
+    : (CONTAINS FILESTREAM)? DEFAULT? | CONTAINS MEMORY_OPTIMIZED_DATA
+    ;
+
+databaseLogOns
+    : (LOG ON fileSpec (COMMA_ fileSpec)*)?
+    ;
+
+declareVariable
+    : DECLARE (variable (COMMA_ variable)* | tableVariable)
+    ;
+
+variable
+    : variableName AS? dataType (EQ_ simpleExpr)?
+    | variableName CURSOR
+    ;
+
+tableVariable
+    : variableName AS? variTableTypeDefinition
+    ;
+
+variTableTypeDefinition
+    : TABLE LP_ tableVariableClause (COMMA_ tableVariableClause)* RP_
+    ;
+
+tableVariableClause
+    : variableTableColumnDefinition | variableTableConstraint
+    ;
+
+variableTableColumnDefinition
+    : columnName (dataTypeName | AS expr) (COLLATE collationName)? ((DEFAULT expr)? | IDENTITY (LP_ NUMBER_ COMMA_ NUMBER_ RP_)?) ROWGUIDCOL? variableTableColumnConstraint
+    ;
+
+variableTableColumnConstraint
+    : (NULL | NOT NULL)?
+    | (PRIMARY KEY | UNIQUE)?
+    | CHECK LP_ expr RP_
+    | WITH indexOption
+    ;
+
+variableTableConstraint
+    : (PRIMARY KEY | UNIQUE) LP_ columnName (COMMA_ columnName)* RP_
+    | CHECK expr
+    ;
+
+setVariable
+    : SET variableName setVariableClause
+    ;
+
+setVariableClause
+    : (DOT_ identifier)? EQ_ (expr | identifier DOT_ identifier | NCHAR_TEXT)
+    | compoundOperation expr
+    | EQ_ cursorVariable
+    | EQ_ LP_ select RP_
+    ;
+
+cursorVariable
+    : variableName
+    | CURSOR cursorClause FOR select (FOR (READ_ONLY | UPDATE (OF name (COMMA_ name)*)))
+    ;
+
+cursorClause
+    : (FORWARD_ONLY | SCROLL)? (STATIC | KEYSET | DYNAMIC | FAST_FORWARD)? (READ_ONLY | SCROLL_LOCKS | OPTIMISTIC)? (TYPE_WARNING)?
+    ;
+
+compoundOperation
+    : PLUS_ EQ_
+    | MINUS_ EQ_
+    | ASTERISK_ EQ_
+    | SLASH_ EQ_
+    | MOD_ EQ_
+    | AMPERSAND_ EQ_
+    | CARET_ EQ_
+    | VERTICAL_BAR_ EQ_
+    ;
+
+funcParameters
+    : LP_ (variableName AS? (owner DOT_)? dataType (EQ_ ignoredIdentifier)? READONLY?)* RP_
+    ;
+
+funcReturns
+    : funcScalarReturn | funcInlineReturn | funcMutiReturn
+    ;
+
+funcMutiReturn
+    : RETURNS variableName TABLE createTableDefinitions (WITH functionOption (COMMA_ functionOption)*)? AS? BEGIN compoundStatement RETURN END
+    ;
+
+funcInlineReturn
+    : RETURNS TABLE (WITH functionOption (COMMA_ functionOption)*)? AS? RETURN LP_? select RP_?
+    ;
+
+funcScalarReturn
+    : RETURNS dataType (WITH functionOption (COMMA_ functionOption)*)? AS? BEGIN compoundStatement RETURN expr
+    ;
+
+tableTypeDefinition
+    : (columnDefinition columnConstraint | computedColumnDefinition) tableConstraint*
+    ;
+
+compoundStatement
+    : validStatement*
+    ;
+
+functionOption
+    : ENCRYPTION?
+    | SCHEMABINDING?
+    | (RETURNS NULL ON NULL INPUT | CALLED ON NULL INPUT)?
+    | executeAsClause?
+    | (INLINE = ( ON | OFF ))?
+    ;
+
+validStatement
+    : (createTable | alterTable | dropTable | truncateTable | insert
+    | update | delete | select | setVariable | declareVariable) SEMI_?
+    ;
+
+procParameters
+    : (procParameter (COMMA_ procParameter)*)?
+    ;
+
+procParameter
+    : variable VARYING? (EQ_ literals)? (OUT | OUTPUT | READONLY)?
+    ;
+
+createProcClause
+    : withCreateProcOption? (FOR REPLICATION)? AS procAsClause
+    ;
+
+withCreateProcOption
+    : WITH (procOption (COMMA_ procOption)*)?
+    ;
+
+procOption
+    : ENCRYPTION
+    | RECOMPILE
+    | executeAsClause
+    | NATIVE_COMPILATION
+    | SCHEMABINDING
+    ;
+
+procAsClause
+    : BEGIN? compoundStatement END?
+    | EXTERNAL NAME (owner DOT_)? (owner DOT_)? name
+    | BEGIN ATOMIC WITH procSetOption (COMMA_ procSetOption)* compoundStatement END?
+    ;
+
+procSetOption
+    : LANGUAGE EQ_ stringLiterals
+    | TRANSACTION ISOLATION LEVEL EQ_ ( SNAPSHOT | REPEATABLE READ | SERIALIZABLE )
+    | DATEFIRST = numberLiterals
+    | DATEFORMAT = stringLiterals
+    | DELAYED_DURABILITY = ( OFF | ON )
+    ;
+
+createViewClause
+    : (WITH viewAttribute (COMMA_ viewAttribute)*)? AS withCommonTableExpr? select (WITH CHECK OPTION)?
+    ;
+
+viewAttribute
+    : ENCRYPTION
+    | SCHEMABINDING
+    | VIEW_METADATA
+    ;
+
+withCommonTableExpr
+    : WITH commonTableExpr (COMMA_ commonTableExpr)*
+    ;
+
+commonTableExpr
+    : name (LP_ columnName (COMMA_ columnName)* RP_)? AS LP_ select RP_
+    ;
+
+createTriggerClause
+    : (WITH dmlTriggerOption COMMA_ dmlTriggerOption)? (FOR | AFTER | INSTEAD OF)
+    INSERT? COMMA_? UPDATE? COMMA_? DELETE? COMMA_? (WITH APPEND)? (NOT FOR REPLICATION)?
+    AS (compoundStatement | EXTERNAL NAME methodSpecifier)
+    ;
+
+dmlTriggerOption
+    : ENCRYPTION | executeAsClause | NATIVE_COMPILATION | SCHEMABINDING |
+    ;
+
+methodSpecifier
+    : name DOT_ name DOT_ name
+    ;
+
+triggerTarget
+    : tableName | viewName | ALL SERVER | DATABASE
+    ;
+
+createOrAlterSequenceClause
+    : AS dataType
+    | (START | RESTART) WITH expr
+    | INCREMENT BY expr
+    | MINVALUE expr? | NO MINVALUE
+    | MAXVALUE expr? | NO MAXVALUE
+    | CACHE expr | NO CACHE
+    | NO? CYCLE
+    ;
+
+createIndexClause
+    : (INCLUDE columnNamesWithSort)? (WHERE filterPredicate)? (WITH LP_ relationalIndexOption (COMMA_ relationalIndexOption)* RP_)?
+    (ON (schemaName LP_ columnName RP_ | name))? (FILESTREAM_ON (name | stringLiterals))?
+    ;
+
+filterPredicate
+    : conjunct (AND conjunct)*
+    ;
+
+conjunct
+    : columnName IN LP_ expr (COMMA_ expr)* RP_
+    | columnName comparisonOperator expr
+    ;
+
+alterIndexClause
+    : REBUILD (PARTITION EQ_ (ALL | expr))? (WITH LP_ relationalIndexOption (COMMA_ relationalIndexOption)* RP_)?
+    | DISABLE
+    | REORGANIZE (PARTITION EQ_ expr)? (WITH LP_ reorganizeOption RP_)?
+    | SET LP_ setIndexOption (COMMA_ setIndexOption) RP_
+    | RESUME (WITH LP_ resumableIndexOptions (COMMA_ resumableIndexOptions)* RP_)?
+    | PAUSE
+    | ABORT
+    ;
+
+relationalIndexOption
+    : PAD_INDEX EQ_ (ON | OFF)
+    | FILLFACTOR EQ_ expr
+    | SORT_IN_TEMPDB EQ_ (ON | OFF)
+    | IGNORE_DUP_KEY EQ_ (ON | OFF)
+    | STATISTICS_NORECOMPUTE EQ_ (ON | OFF)
+    | STATISTICS_INCREMENTAL EQ_ (ON | OFF)
+    | DROP_EXISTING EQ_ (ON | OFF)
+    | ONLINE EQ_ (ON lowPriorityLockWait? | OFF)
+    | RESUMABLE EQ_ (ON | OFF)
+    | MAX_DURATION EQ_ expr MINUTES?
+    | ALLOW_ROW_LOCKS EQ_ (ON | OFF)
+    | ALLOW_PAGE_LOCKS EQ_ (ON | OFF)
+    | OPTIMIZE_FOR_SEQUENTIAL_KEY EQ_ (ON | OFF)
+    | MAXDOP EQ_ expr
+    | DATA_COMPRESSION EQ_ (NONE | ROW | PAGE | COLUMNSTORE | COLUMNSTORE_ARCHIVE) (ON PARTITIONS LP_ partitionNumberRange (COMMA_ partitionNumberRange)*)?
+    ;
+
+partitionNumberRange
+    : expr (TO expr)?
+    ;
+
+reorganizeOption
+    : LOB_COMPACTION EQ_ (ON | OFF)
+    | COMPRESS_ALL_ROW_GROUPS EQ_ (ON | OFF)
+    ;
+
+setIndexOption
+    : ALLOW_ROW_LOCKS EQ_ (ON | OFF)
+    | ALLOW_PAGE_LOCKS EQ_ (ON | OFF)
+    | OPTIMIZE_FOR_SEQUENTIAL_KEY EQ_ (ON | OFF)
+    | IGNORE_DUP_KEY EQ_ (ON | OFF)
+    | STATISTICS_NORECOMPUTE EQ_ (ON | OFF)
+    | COMPRESSION_DELAY EQ_ (expr MINUTES?)
+    ;
+
+resumableIndexOptions
+    : MAXDOP EQ_ expr
+    | MAX_DURATION EQ_ expr MINUTES?
+    | lowPriorityLockWait
     ;

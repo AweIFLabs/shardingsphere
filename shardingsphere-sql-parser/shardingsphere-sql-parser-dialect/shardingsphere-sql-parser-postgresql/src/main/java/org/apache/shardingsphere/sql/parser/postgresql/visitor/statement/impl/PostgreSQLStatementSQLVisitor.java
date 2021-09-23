@@ -37,6 +37,7 @@ import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.Co
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.ColumnNameContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.ColumnNamesContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.ColumnrefContext;
+import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.ConstraintNameContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.DataTypeContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.DataTypeLengthContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.DataTypeNameContext;
@@ -51,6 +52,7 @@ import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.Fu
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.FunctionExprCommonSubexprContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.GroupByItemContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.GroupClauseContext;
+import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.HavingClauseContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.IdentifierContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.InExprContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.IndexNameContext;
@@ -93,16 +95,20 @@ import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.Up
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.ValuesClauseContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.WhereClauseContext;
 import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.WhereOrCurrentClauseContext;
+import org.apache.shardingsphere.sql.parser.autogen.PostgreSQLStatementParser.WindowClauseContext;
 import org.apache.shardingsphere.sql.parser.sql.common.constant.AggregationType;
 import org.apache.shardingsphere.sql.parser.sql.common.constant.OrderDirection;
+import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.constraint.ConstraintSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.ddl.index.IndexSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.assignment.AssignmentSegment;
+import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.assignment.ColumnAssignmentSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.assignment.InsertValuesSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.assignment.SetAssignmentSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.column.ColumnSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.column.InsertColumnsSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.expr.BetweenExpression;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.expr.BinaryOperationExpression;
+import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.expr.ExistsSubqueryExpression;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.expr.ExpressionSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.expr.InExpression;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.expr.ListExpression;
@@ -129,12 +135,15 @@ import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.pagination.li
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.pagination.limit.LimitValueSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.pagination.limit.NumberLiteralLimitValueSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.pagination.limit.ParameterMarkerLimitValueSegment;
+import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.predicate.HavingSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.predicate.LockSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.dml.predicate.WhereSegment;
+import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.AliasAvailable;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.AliasSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.DataTypeLengthSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.DataTypeSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.OwnerSegment;
+import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.WindowSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.table.JoinTableSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.table.SimpleTableSegment;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.table.SubqueryTableSegment;
@@ -200,7 +209,7 @@ public abstract class PostgreSQLStatementSQLVisitor extends PostgreSQLStatementB
     
     @Override
     public final ASTNode visitTableName(final TableNameContext ctx) {
-        SimpleTableSegment result = new SimpleTableSegment(new TableNameSegment(ctx.getStart().getStartIndex(), ctx.getStop().getStopIndex(), (IdentifierValue) visit(ctx.name())));
+        SimpleTableSegment result = new SimpleTableSegment(new TableNameSegment(ctx.name().getStart().getStartIndex(), ctx.name().getStop().getStopIndex(), (IdentifierValue) visit(ctx.name())));
         OwnerContext owner = ctx.owner();
         if (null != owner) {
             result.setOwner(new OwnerSegment(owner.getStart().getStartIndex(), owner.getStop().getStopIndex(), (IdentifierValue) visit(owner.identifier())));
@@ -221,6 +230,11 @@ public abstract class PostgreSQLStatementSQLVisitor extends PostgreSQLStatementB
     @Override
     public final ASTNode visitIndexName(final IndexNameContext ctx) {
         return new IndexSegment(ctx.getStart().getStartIndex(), ctx.getStop().getStopIndex(), (IdentifierValue) visit(ctx.identifier()));
+    }
+    
+    @Override
+    public final ASTNode visitConstraintName(final ConstraintNameContext ctx) {
+        return new ConstraintSegment(ctx.getStart().getStartIndex(), ctx.getStop().getStopIndex(), (IdentifierValue) visit(ctx.identifier()));
     }
     
     @Override
@@ -258,8 +272,11 @@ public abstract class PostgreSQLStatementSQLVisitor extends PostgreSQLStatementB
         if (null != ctx.comparisonOperator()) {
             return createCommonBinaryOperationSegment(ctx, ctx.comparisonOperator().getText());
         }
-        if (null != ctx.logicalOperator()) {
-            return createCommonBinaryOperationSegment(ctx, ctx.logicalOperator().getText());
+        if (null != ctx.andOperator()) {
+            return createCommonBinaryOperationSegment(ctx, ctx.andOperator().getText());
+        }
+        if (null != ctx.orOperator()) {
+            return createCommonBinaryOperationSegment(ctx, ctx.orOperator().getText());
         }
         super.visitAExpr(ctx);
         String text = ctx.start.getInputStream().getText(new Interval(ctx.start.getStartIndex(), ctx.stop.getStopIndex()));
@@ -305,9 +322,21 @@ public abstract class PostgreSQLStatementSQLVisitor extends PostgreSQLStatementB
         if (null != ctx.funcExpr()) {
             return visit(ctx.funcExpr());
         }
+        if (null != ctx.selectWithParens()) {
+            return createSubqueryExpressionSegment(ctx);
+        }
         super.visitCExpr(ctx);
         String text = ctx.start.getInputStream().getText(new Interval(ctx.start.getStartIndex(), ctx.stop.getStopIndex()));
         return new CommonExpressionSegment(ctx.start.getStartIndex(), ctx.stop.getStopIndex(), text);
+    }
+    
+    private ExpressionSegment createSubqueryExpressionSegment(final CExprContext ctx) {
+        SubquerySegment subquerySegment = new SubquerySegment(ctx.selectWithParens().getStart().getStartIndex(), 
+                ctx.selectWithParens().getStop().getStopIndex(), (PostgreSQLSelectStatement) visit(ctx.selectWithParens()));
+        if (null != ctx.EXISTS()) {
+            return new ExistsSubqueryExpression(ctx.start.getStartIndex(), ctx.stop.getStopIndex(), subquerySegment);
+        }
+        return new SubqueryExpressionSegment(subquerySegment);
     }
     
     @Override
@@ -367,27 +396,31 @@ public abstract class PostgreSQLStatementSQLVisitor extends PostgreSQLStatementB
     
     private InExpression createInSegment(final AExprContext ctx) {
         ExpressionSegment left = (ExpressionSegment) visit(ctx.aExpr(0));
-        ExpressionSegment right = visitInExpression(ctx.inExpr());
+        ExpressionSegment right = createInExpressionSegment(ctx.inExpr());
         boolean not = null != ctx.NOT();
         return new InExpression(ctx.start.getStartIndex(), ctx.stop.getStopIndex(), left, right, not);
     }
     
-    private ExpressionSegment visitInExpression(final InExprContext ctx) {
+    @SuppressWarnings("unchecked")
+    private ExpressionSegment createInExpressionSegment(final InExprContext ctx) {
         if (null != ctx.selectWithParens()) {
             PostgreSQLSelectStatement select = (PostgreSQLSelectStatement) visit(ctx.selectWithParens());
             SubquerySegment subquerySegment = new SubquerySegment(ctx.start.getStartIndex(), ctx.stop.getStopIndex(), select);
             return new SubqueryExpressionSegment(subquerySegment);
         }
-        return (ExpressionSegment) visit(ctx.exprList());
+        ListExpression result = new ListExpression(ctx.LP_().getSymbol().getStartIndex(), ctx.RP_().getSymbol().getStopIndex());
+        result.getItems().addAll(((CollectionValue<ExpressionSegment>) visit(ctx.exprList())).getValue());
+        return result;
     }
     
+    @SuppressWarnings("unchecked")
     @Override
     public ASTNode visitExprList(final ExprListContext ctx) {
-        ListExpression result = new ListExpression(ctx.start.getStartIndex(), ctx.stop.getStopIndex());
+        CollectionValue<ExpressionSegment> result = new CollectionValue<>();
         if (null != ctx.exprList()) {
-            result.getItems().addAll(((ListExpression) visitExprList(ctx.exprList())).getItems());
+            result.combine((CollectionValue<ExpressionSegment>) visitExprList(ctx.exprList()));
         }
-        result.getItems().add((ExpressionSegment) visit(ctx.aExpr()));
+        result.getValue().add((ExpressionSegment) visit(ctx.aExpr()));
         return result;
     }
     
@@ -640,23 +673,16 @@ public abstract class PostgreSQLStatementSQLVisitor extends PostgreSQLStatementB
     @Override
     public ASTNode visitSetClause(final SetClauseContext ctx) {
         ColumnSegment columnSegment = (ColumnSegment) visit(ctx.setTarget());
+        List<ColumnSegment> columnSegments = new LinkedList<>();
+        columnSegments.add(columnSegment);
         ExpressionSegment expressionSegment = (ExpressionSegment) visit(ctx.aExpr());
-        return new AssignmentSegment(ctx.start.getStartIndex(), ctx.stop.getStopIndex(), columnSegment, expressionSegment);
+        return new ColumnAssignmentSegment(ctx.start.getStartIndex(), ctx.stop.getStopIndex(), columnSegments, expressionSegment);
     }
     
     @Override
     public ASTNode visitSetTarget(final SetTargetContext ctx) {
-        OwnerSegment owner = null;
-        IdentifierValue identifierValue;
-        if (null != ctx.optIndirection().indirectionEl()) {
-            owner = new OwnerSegment(ctx.colId().start.getStartIndex(), ctx.colId().stop.getStopIndex(), new IdentifierValue(ctx.colId().getText()));
-            identifierValue = new IdentifierValue(ctx.optIndirection().getText());
-        } else {
-            identifierValue = new IdentifierValue(ctx.colId().getText());
-        }
-        ColumnSegment result = new ColumnSegment(ctx.start.getStartIndex(), ctx.stop.getStopIndex(), identifierValue);
-        result.setOwner(owner);
-        return result;
+        IdentifierValue identifierValue = new IdentifierValue(ctx.colId().getText());
+        return new ColumnSegment(ctx.start.getStartIndex(), ctx.stop.getStopIndex(), identifierValue);
     }
     
     @Override
@@ -664,11 +690,13 @@ public abstract class PostgreSQLStatementSQLVisitor extends PostgreSQLStatementB
         SimpleTableSegment result;
         if (null != ctx.colId()) {
             ColIdContext colId = ctx.relationExpr().qualifiedName().colId();
-            result = new SimpleTableSegment(colId.start.getStartIndex(), colId.stop.getStopIndex(), new IdentifierValue(colId.getText()));
+            TableNameSegment tableName = new TableNameSegment(colId.start.getStartIndex(), colId.stop.getStopIndex(), new IdentifierValue(colId.getText()));
+            result = new SimpleTableSegment(tableName);
             result.setAlias(new AliasSegment(ctx.colId().start.getStartIndex(), ctx.stop.getStopIndex(), new IdentifierValue(ctx.colId().getText())));
         } else {
             ColIdContext colId = ctx.relationExpr().qualifiedName().colId();
-            result = new SimpleTableSegment(colId.start.getStartIndex(), colId.stop.getStopIndex(), new IdentifierValue(colId.getText()));
+            TableNameSegment tableName = new TableNameSegment(colId.start.getStartIndex(), colId.stop.getStopIndex(), new IdentifierValue(colId.getText()));
+            result = new SimpleTableSegment(tableName);
         }
         return result;
     }
@@ -762,6 +790,8 @@ public abstract class PostgreSQLStatementSQLVisitor extends PostgreSQLStatementB
                 projects.setDistinctRow(true);
             }
             result.setProjections(projects);
+        } else {
+            result.setProjections(new ProjectionsSegment(-1, -1));
         }
         if (null != ctx.fromClause()) {
             TableSegment tableSegment = (TableSegment) visit(ctx.fromClause());
@@ -773,7 +803,24 @@ public abstract class PostgreSQLStatementSQLVisitor extends PostgreSQLStatementB
         if (null != ctx.groupClause()) {
             result.setGroupBy((GroupBySegment) visit(ctx.groupClause()));
         }
+        if (null != ctx.havingClause()) {
+            result.setHaving((HavingSegment) visit(ctx.havingClause()));
+        }
+        if (null != ctx.windowClause()) {
+            result.setWindow((WindowSegment) visit(ctx.windowClause()));
+        }
         return result;
+    }
+    
+    @Override
+    public ASTNode visitHavingClause(final HavingClauseContext ctx) {
+        ExpressionSegment expr = (ExpressionSegment) visit(ctx.aExpr());
+        return new HavingSegment(ctx.getStart().getStartIndex(), ctx.getStop().getStopIndex(), expr);
+    }
+    
+    @Override
+    public ASTNode visitWindowClause(final WindowClauseContext ctx) {
+        return new WindowSegment(ctx.getStart().getStartIndex(), ctx.getStop().getStopIndex());
     }
     
     @Override
@@ -825,42 +872,28 @@ public abstract class PostgreSQLStatementSQLVisitor extends PostgreSQLStatementB
             return shorthandProjection;
         }
         AExprContext expr = ctx.aExpr();
-        if (1 == expr.getChildCount() && null != expr.cExpr()) {
+        ProjectionSegment result = new ExpressionProjectionSegment(ctx.start.getStartIndex(), ctx.stop.getStopIndex(), expr.getText());
+        if (null != expr.cExpr()) {
             ASTNode projection = visit(expr.cExpr());
-            AliasSegment alias = null != ctx.identifier()
-                    ? new AliasSegment(ctx.identifier().start.getStartIndex(), ctx.identifier().stop.getStopIndex(), new IdentifierValue(ctx.identifier().getText())) : null;
             if (projection instanceof ColumnSegment) {
-                ColumnProjectionSegment result = new ColumnProjectionSegment((ColumnSegment) projection);
-                result.setAlias(alias);
-                return result;
+                result = new ColumnProjectionSegment((ColumnSegment) projection);
+            }
+            if (null != expr.cExpr().funcExpr()) {
+                result = generateProjectFromFuncExpr(expr.cExpr().funcExpr());
+            }
+            if (projection instanceof SubqueryExpressionSegment) {
+                SubqueryExpressionSegment subqueryExpression = (SubqueryExpressionSegment) projection;
+                String text = ctx.start.getInputStream().getText(new Interval(subqueryExpression.getStartIndex(), subqueryExpression.getStopIndex()));
+                result = new SubqueryProjectionSegment(subqueryExpression.getSubquery(), text);
+            }
+            if (projection instanceof ExistsSubqueryExpression) {
+                ExistsSubqueryExpression existsSubqueryExpression = (ExistsSubqueryExpression) projection;
+                String text = ctx.start.getInputStream().getText(new Interval(existsSubqueryExpression.getStartIndex(), existsSubqueryExpression.getStopIndex()));
+                result = new SubqueryProjectionSegment(existsSubqueryExpression.getSubquery(), text);
             }
         }
-        if (null != expr.cExpr() && null != expr.cExpr().funcExpr()) {
-            visit(expr.cExpr().funcExpr());
-            ProjectionSegment projection = generateProjectFromFuncExpr(expr.cExpr().funcExpr());
-            AliasSegment alias = null != ctx.identifier()
-                    ? new AliasSegment(ctx.identifier().start.getStartIndex(), ctx.identifier().stop.getStopIndex(), new IdentifierValue(ctx.identifier().getText())) : null;
-            if (projection instanceof AggregationProjectionSegment) {
-                ((AggregationProjectionSegment) projection).setAlias(alias);
-            }
-            if (projection instanceof AggregationDistinctProjectionSegment) {
-                ((AggregationDistinctProjectionSegment) projection).setAlias(alias);
-            }
-            return projection;
-        }
-        if (null != expr.cExpr() && null != expr.cExpr().selectWithParens()) {
-            PostgreSQLSelectStatement select = (PostgreSQLSelectStatement) visit(expr.cExpr().selectWithParens());
-            SubquerySegment subquery = new SubquerySegment(expr.cExpr().selectWithParens().start.getStartIndex(), expr.cExpr().selectWithParens().stop.getStopIndex(), select);
-            SubqueryProjectionSegment projection = new SubqueryProjectionSegment(subquery);
-            AliasSegment alias = null != ctx.identifier()
-                    ? new AliasSegment(ctx.identifier().start.getStartIndex(), ctx.identifier().stop.getStopIndex(), new IdentifierValue(ctx.identifier().getText())) : null;
-            projection.setAlias(alias);
-            return projection;
-        }
-        ExpressionProjectionSegment result = new ExpressionProjectionSegment(ctx.start.getStartIndex(), ctx.stop.getStopIndex(), expr.getText());
-        if (null != ctx.identifier()) {
-            AliasSegment alias = new AliasSegment(ctx.identifier().start.getStartIndex(), ctx.identifier().stop.getStopIndex(), new IdentifierValue(ctx.identifier().getText()));
-            result.setAlias(alias);
+        if (result instanceof AliasAvailable && null != ctx.identifier()) {
+            ((AliasAvailable) result).setAlias(new AliasSegment(ctx.identifier().start.getStartIndex(), ctx.identifier().stop.getStopIndex(), new IdentifierValue(ctx.identifier().getText())));
         }
         return result;
     }
@@ -919,7 +952,8 @@ public abstract class PostgreSQLStatementSQLVisitor extends PostgreSQLStatementB
             return result;
         }
         //        TODO deal with functionTable and xmlTable
-        return new SimpleTableSegment(ctx.start.getStartIndex(), ctx.stop.getStopIndex(), new IdentifierValue("not support"));
+        TableNameSegment tableName = new TableNameSegment(ctx.start.getStartIndex(), ctx.stop.getStopIndex(), new IdentifierValue("not support"));
+        return new SimpleTableSegment(tableName);
     }
     
     private JoinTableSegment visitJoinedTable(final JoinedTableContext ctx, final JoinTableSegment tableSegment) {
@@ -970,11 +1004,13 @@ public abstract class PostgreSQLStatementSQLVisitor extends PostgreSQLStatementB
         QualifiedNameContext qualifiedName = ctx.qualifiedName();
         if (null != qualifiedName.indirection()) {
             AttrNameContext tableName = qualifiedName.indirection().indirectionEl().attrName();
-            SimpleTableSegment table = new SimpleTableSegment(tableName.start.getStartIndex(), tableName.stop.getStopIndex(), new IdentifierValue(tableName.getText()));
+            SimpleTableSegment table = new SimpleTableSegment(new TableNameSegment(tableName.start.getStartIndex(), 
+                    tableName.stop.getStopIndex(), new IdentifierValue(tableName.getText())));
             table.setOwner(new OwnerSegment(qualifiedName.colId().start.getStartIndex(), qualifiedName.colId().stop.getStopIndex(), new IdentifierValue(qualifiedName.colId().getText())));
             return table;
         }
-        return new SimpleTableSegment(qualifiedName.colId().start.getStartIndex(), qualifiedName.colId().stop.getStopIndex(), new IdentifierValue(qualifiedName.colId().getText()));
+        return new SimpleTableSegment(new TableNameSegment(qualifiedName.colId().start.getStartIndex(), 
+                qualifiedName.colId().stop.getStopIndex(), new IdentifierValue(qualifiedName.colId().getText())));
     }
     
     @Override

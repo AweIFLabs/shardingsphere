@@ -17,9 +17,15 @@
 
 package org.apache.shardingsphere.test.integration.junit.container.storage.impl;
 
+import lombok.SneakyThrows;
 import org.apache.shardingsphere.infra.database.type.dialect.PostgreSQLDatabaseType;
+import org.apache.shardingsphere.test.integration.env.DataSourceEnvironment;
 import org.apache.shardingsphere.test.integration.junit.container.storage.ShardingSphereStorageContainer;
 import org.apache.shardingsphere.test.integration.junit.param.model.ParameterizedArray;
+import org.postgresql.util.PSQLException;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
 
 /**
  * PostgreSQL container.
@@ -32,15 +38,31 @@ public final class PostgreSQLContainer extends ShardingSphereStorageContainer {
     
     @Override
     protected void configure() {
-        addEnv("POSTGRES_USER", "postgres");
-        addEnv("POSTGRES_PASSWORD", "postgres");
+        withCommand("--max_connections=200");
+        addEnv("POSTGRES_USER", "root");
+        addEnv("POSTGRES_PASSWORD", "root");
         withInitSQLMapping("/env/" + getParameterizedArray().getScenario() + "/init-sql/postgresql");
-        super.configure();
     }
-    
+
+    @Override
+    @SneakyThrows
+    protected void execute() {
+        int time = 0;
+        Class.forName(getDriverClassName());
+        String url = DataSourceEnvironment.getURL("PostgreSQL", getHost(), getPort());
+        // TODO logic need prefect
+        while (time++ < 20) {
+            try (Connection ignored = DriverManager.getConnection(url, getUsername(), getPassword())) {
+                break;
+            } catch (PSQLException ex) {
+                Thread.sleep(1000L);
+            }
+        }
+    }
+
     @Override
     protected String getUrl(final String dataSourceName) {
-        return String.format("jdbc:postgresql://%s:%s/", getHost(), getPort());
+        return DataSourceEnvironment.getURL("PostgreSQL", getHost(), getPort(), dataSourceName);
     }
     
     @Override
@@ -50,11 +72,11 @@ public final class PostgreSQLContainer extends ShardingSphereStorageContainer {
     
     @Override
     protected String getUsername() {
-        return "postgres";
+        return "root";
     }
     
     @Override
     protected String getPassword() {
-        return "postgres";
+        return "root";
     }
 }

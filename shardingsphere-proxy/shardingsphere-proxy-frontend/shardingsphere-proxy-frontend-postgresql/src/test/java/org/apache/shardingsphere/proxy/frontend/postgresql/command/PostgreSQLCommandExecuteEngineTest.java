@@ -38,16 +38,20 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import java.sql.SQLException;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public final class PostgreSQLCommandExecuteEngineTest {
+    
+    @Mock
+    private PostgreSQLConnectionContext connectionContext;
     
     @Mock
     private ChannelHandlerContext channelHandlerContext;
@@ -68,17 +72,28 @@ public final class PostgreSQLCommandExecuteEngineTest {
     }
     
     @Test
+    public void assertSimpleQueryWithUpdateResponseWriteQueryData() throws SQLException {
+        PostgreSQLComQueryExecutor comQueryExecutor = mock(PostgreSQLComQueryExecutor.class);
+        when(comQueryExecutor.getResponseType()).thenReturn(ResponseType.UPDATE);
+        PostgreSQLCommandExecuteEngine commandExecuteEngine = new PostgreSQLCommandExecuteEngine();
+        boolean actual = commandExecuteEngine.writeQueryData(channelHandlerContext, backendConnection, comQueryExecutor, 0);
+        assertTrue(actual);
+        verify(channelHandlerContext).write(any(PostgreSQLReadyForQueryPacket.class));
+    }
+    
+    @Test
     public void assertWriteQueryDataWithUpdate() throws SQLException {
         PostgreSQLCommandExecuteEngine commandExecuteEngine = new PostgreSQLCommandExecuteEngine();
         when(queryCommandExecutor.getResponseType()).thenReturn(ResponseType.UPDATE);
-        commandExecuteEngine.writeQueryData(channelHandlerContext, backendConnection, queryCommandExecutor, 0);
-        verify(channelHandlerContext, times(1)).write(isA(PostgreSQLReadyForQueryPacket.class));
+        boolean actual = commandExecuteEngine.writeQueryData(channelHandlerContext, backendConnection, queryCommandExecutor, 0);
+        assertFalse(actual);
     }
     
     @Test
     public void assertWriteQueryDataWithComSync() throws SQLException {
         PostgreSQLCommandExecuteEngine commandExecuteEngine = new PostgreSQLCommandExecuteEngine();
-        commandExecuteEngine.writeQueryData(channelHandlerContext, backendConnection, new PostgreSQLComSyncExecutor(backendConnection), 0);
+        boolean actual = commandExecuteEngine.writeQueryData(channelHandlerContext, backendConnection, new PostgreSQLComSyncExecutor(connectionContext, backendConnection), 0);
+        assertTrue(actual);
         verify(channelHandlerContext, never()).write(any(Object.class));
     }
     
@@ -87,7 +102,8 @@ public final class PostgreSQLCommandExecuteEngineTest {
         PostgreSQLCommandExecuteEngine commandExecuteEngine = new PostgreSQLCommandExecuteEngine();
         when(queryCommandExecutor.getResponseType()).thenReturn(ResponseType.QUERY);
         when(channel.isActive()).thenReturn(false);
-        commandExecuteEngine.writeQueryData(channelHandlerContext, backendConnection, queryCommandExecutor, 0);
+        boolean actual = commandExecuteEngine.writeQueryData(channelHandlerContext, backendConnection, queryCommandExecutor, 0);
+        assertTrue(actual);
         verify(channelHandlerContext).write(isA(PostgreSQLCommandCompletePacket.class));
     }
     
@@ -103,7 +119,8 @@ public final class PostgreSQLCommandExecuteEngineTest {
         PostgreSQLPacket packet = mock(PostgreSQLPacket.class);
         when(queryCommandExecutor.getQueryRowPacket()).thenReturn(packet);
         PostgreSQLCommandExecuteEngine commandExecuteEngine = new PostgreSQLCommandExecuteEngine();
-        commandExecuteEngine.writeQueryData(channelHandlerContext, backendConnection, queryCommandExecutor, 0);
+        boolean actual = commandExecuteEngine.writeQueryData(channelHandlerContext, backendConnection, queryCommandExecutor, 0);
+        assertTrue(actual);
         verify(resourceLock).doAwait();
         verify(channelHandlerContext).write(packet);
         verify(channelHandlerContext).write(isA(PostgreSQLCommandCompletePacket.class));

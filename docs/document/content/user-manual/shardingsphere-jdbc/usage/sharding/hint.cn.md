@@ -58,7 +58,6 @@ HintManager hintManager = HintManager.getInstance();
 - 使用 `hintManager.addTableShardingValue` 来添加表分片键值。
 
 > 分库不分表情况下，强制路由至某一个分库时，可使用 `hintManager.setDatabaseShardingValue` 方式添加分片。
-通过此方式添加分片键值后，将跳过 SQL 解析和改写阶段，从而提高整体执行效率。
 
 #### 清除分片键值
 
@@ -105,7 +104,7 @@ try (HintManager hintManager = HintManager.getInstance();
 
 #### 设置主库路由
 
-- 使用 `hintManager.setPrimaryRouteOnly` 设置主库路由。
+- 使用 `hintManager.setWriteRouteOnly` 设置主库路由。
 
 #### 清除分片键值
 
@@ -115,11 +114,10 @@ try (HintManager hintManager = HintManager.getInstance();
 
 ```java
 String sql = "SELECT * FROM t_order";
-try (
-        HintManager hintManager = HintManager.getInstance();
-        Connection conn = dataSource.getConnection();
-        PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-    hintManager.setPrimaryRouteOnly();
+try (HintManager hintManager = HintManager.getInstance();
+     Connection conn = dataSource.getConnection();
+     PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+    hintManager.setWriteRouteOnly();
     try (ResultSet rs = preparedStatement.executeQuery()) {
         while (rs.next()) {
             // ...

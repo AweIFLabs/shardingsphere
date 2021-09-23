@@ -24,6 +24,7 @@ import org.apache.shardingsphere.db.protocol.postgresql.packet.command.PostgreSQ
 import org.apache.shardingsphere.db.protocol.postgresql.packet.command.PostgreSQLCommandPacketType;
 import org.apache.shardingsphere.db.protocol.postgresql.packet.command.query.binary.bind.PostgreSQLComBindPacket;
 import org.apache.shardingsphere.db.protocol.postgresql.packet.command.query.binary.close.PostgreSQLComClosePacket;
+import org.apache.shardingsphere.db.protocol.postgresql.packet.command.query.binary.execute.PostgreSQLComExecutePacket;
 import org.apache.shardingsphere.db.protocol.postgresql.packet.command.query.binary.parse.PostgreSQLComParsePacket;
 import org.apache.shardingsphere.db.protocol.postgresql.packet.command.query.text.PostgreSQLComQueryPacket;
 import org.apache.shardingsphere.proxy.backend.communication.jdbc.connection.BackendConnection;
@@ -39,6 +40,7 @@ import org.apache.shardingsphere.proxy.frontend.postgresql.command.query.binary.
 import org.apache.shardingsphere.proxy.frontend.postgresql.command.query.text.PostgreSQLComQueryExecutor;
 
 import java.sql.SQLException;
+import java.util.Collections;
 
 /**
  * Command executor factory for PostgreSQL.
@@ -53,31 +55,36 @@ public final class PostgreSQLCommandExecutorFactory {
      * @param commandPacketType command packet type for PostgreSQL
      * @param commandPacket command packet for PostgreSQL
      * @param backendConnection backend connection
+     * @param connectionContext PostgreSQL connection context
      * @return command executor
      * @throws SQLException SQL exception
      */
-    public static CommandExecutor newInstance(final PostgreSQLCommandPacketType commandPacketType, 
-                                              final PostgreSQLCommandPacket commandPacket, final BackendConnection backendConnection) throws SQLException {
+    public static CommandExecutor newInstance(final PostgreSQLCommandPacketType commandPacketType, final PostgreSQLCommandPacket commandPacket,
+                                              final BackendConnection backendConnection, final PostgreSQLConnectionContext connectionContext) throws SQLException {
         log.debug("Execute packet type: {}, value: {}", commandPacketType, commandPacket);
         switch (commandPacketType) {
             case SIMPLE_QUERY:
-                return new PostgreSQLComQueryExecutor((PostgreSQLComQueryPacket) commandPacket, backendConnection);
+                return new PostgreSQLComQueryExecutor(connectionContext, (PostgreSQLComQueryPacket) commandPacket, backendConnection);
             case PARSE_COMMAND:
                 return new PostgreSQLComParseExecutor((PostgreSQLComParsePacket) commandPacket, backendConnection);
             case BIND_COMMAND:
-                return new PostgreSQLComBindExecutor((PostgreSQLComBindPacket) commandPacket, backendConnection);
+                connectionContext.getPendingExecutors().add(new PostgreSQLComBindExecutor(connectionContext, (PostgreSQLComBindPacket) commandPacket, backendConnection));
+                break;
             case DESCRIBE_COMMAND:
-                return new PostgreSQLComDescribeExecutor();
+                connectionContext.getPendingExecutors().add(new PostgreSQLComDescribeExecutor(connectionContext));
+                break;
             case EXECUTE_COMMAND:
-                return new PostgreSQLComExecuteExecutor();
+                return new PostgreSQLComExecuteExecutor(connectionContext, (PostgreSQLComExecutePacket) commandPacket);
             case SYNC_COMMAND:
-                return new PostgreSQLComSyncExecutor(backendConnection);
+                return new PostgreSQLComSyncExecutor(connectionContext, backendConnection);
             case CLOSE_COMMAND:
-                return new PostgreSQLComCloseExecutor((PostgreSQLComClosePacket) commandPacket, backendConnection);
+                connectionContext.getPendingExecutors().add(new PostgreSQLComCloseExecutor(connectionContext, (PostgreSQLComClosePacket) commandPacket, backendConnection));
+                break;
             case TERMINATE:
                 return new PostgreSQLComTerminationExecutor();
             default:
-                return new PostgreSQLUnsupportedCommandExecutor();
+                return new PostgreSQLUnsupportedCommandExecutor(connectionContext);
         }
+        return Collections::emptyList;
     }
 }

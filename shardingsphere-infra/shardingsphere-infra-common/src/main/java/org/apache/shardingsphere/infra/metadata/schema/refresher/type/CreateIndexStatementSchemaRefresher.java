@@ -17,8 +17,10 @@
 
 package org.apache.shardingsphere.infra.metadata.schema.refresher.type;
 
-import org.apache.shardingsphere.infra.metadata.schema.ShardingSphereSchema;
-import org.apache.shardingsphere.infra.metadata.schema.builder.SchemaBuilderMaterials;
+import com.google.common.base.Strings;
+import org.apache.shardingsphere.infra.config.properties.ConfigurationProperties;
+import org.apache.shardingsphere.infra.metadata.ShardingSphereMetaData;
+import org.apache.shardingsphere.infra.metadata.schema.builder.util.IndexMetaDataUtil;
 import org.apache.shardingsphere.infra.metadata.schema.model.IndexMetaData;
 import org.apache.shardingsphere.infra.metadata.schema.refresher.SchemaRefresher;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.ddl.CreateIndexStatement;
@@ -26,17 +28,17 @@ import org.apache.shardingsphere.sql.parser.sql.common.statement.ddl.CreateIndex
 import java.util.Collection;
 
 /**
- * ShardingSphere schema refresher for create index statement.
+ * Schema refresher for create index statement.
  */
 public final class CreateIndexStatementSchemaRefresher implements SchemaRefresher<CreateIndexStatement> {
     
     @Override
-    public void refresh(final ShardingSphereSchema schema, final Collection<String> routeDataSourceNames, final CreateIndexStatement sqlStatement, final SchemaBuilderMaterials materials) {
-        if (null == sqlStatement.getIndex()) {
+    public void refresh(final ShardingSphereMetaData schemaMetaData, final Collection<String> logicDataSourceNames, final CreateIndexStatement sqlStatement, final ConfigurationProperties props) {
+        String indexName = null != sqlStatement.getIndex() ? sqlStatement.getIndex().getIdentifier().getValue() : IndexMetaDataUtil.getGeneratedLogicIndexName(sqlStatement.getColumns());
+        if (Strings.isNullOrEmpty(indexName)) {
             return;
         }
         String tableName = sqlStatement.getTable().getTableName().getIdentifier().getValue();
-        String indexName = sqlStatement.getIndex().getIdentifier().getValue();
-        schema.get(tableName).getIndexes().put(indexName, new IndexMetaData(indexName));
+        schemaMetaData.getSchema().get(tableName).getIndexes().put(indexName, new IndexMetaData(indexName));
     }
 }

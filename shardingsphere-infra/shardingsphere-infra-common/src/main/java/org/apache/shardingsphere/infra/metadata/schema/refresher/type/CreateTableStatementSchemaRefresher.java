@@ -17,63 +17,41 @@
 
 package org.apache.shardingsphere.infra.metadata.schema.refresher.type;
 
-import org.apache.shardingsphere.infra.eventbus.ShardingSphereEventBus;
-import org.apache.shardingsphere.infra.metadata.schema.ShardingSphereSchema;
+import org.apache.shardingsphere.infra.config.properties.ConfigurationProperties;
+import org.apache.shardingsphere.infra.metadata.ShardingSphereMetaData;
 import org.apache.shardingsphere.infra.metadata.schema.builder.SchemaBuilderMaterials;
 import org.apache.shardingsphere.infra.metadata.schema.builder.TableMetaDataBuilder;
-import org.apache.shardingsphere.infra.metadata.schema.builder.loader.TableMetaDataLoader;
 import org.apache.shardingsphere.infra.metadata.schema.model.TableMetaData;
 import org.apache.shardingsphere.infra.metadata.schema.refresher.SchemaRefresher;
-import org.apache.shardingsphere.infra.metadata.schema.refresher.event.CreateTableEvent;
-import org.apache.shardingsphere.infra.rule.ShardingSphereRule;
-import org.apache.shardingsphere.infra.rule.type.TableContainedRule;
+import org.apache.shardingsphere.infra.rule.identifier.type.DataNodeContainedRule;
+import org.apache.shardingsphere.infra.rule.identifier.type.MutableDataNodeRule;
 import org.apache.shardingsphere.sql.parser.sql.common.statement.ddl.CreateTableStatement;
 
-import javax.sql.DataSource;
 import java.sql.SQLException;
 import java.util.Collection;
-import java.util.Objects;
+import java.util.Collections;
 import java.util.Optional;
 
 /**
- * ShardingSphere schema refresher for create table statement.
+ * Schema refresher for create table statement.
  */
 public final class CreateTableStatementSchemaRefresher implements SchemaRefresher<CreateTableStatement> {
     
     @Override
-    public void refresh(final ShardingSphereSchema schema, final Collection<String> routeDataSourceNames, 
-                        final CreateTableStatement sqlStatement, final SchemaBuilderMaterials materials) throws SQLException {
+    public void refresh(final ShardingSphereMetaData schemaMetaData, final Collection<String> logicDataSourceNames,
+                        final CreateTableStatement sqlStatement, final ConfigurationProperties props) throws SQLException {
         String tableName = sqlStatement.getTable().getTableName().getIdentifier().getValue();
-        TableMetaData tableMetaData;
-        if (containsInTableContainedRule(tableName, materials)) {
-            tableMetaData = TableMetaDataBuilder.build(tableName, materials).orElse(new TableMetaData());
-        } else {
-            tableMetaData = loadTableMetaData(tableName, routeDataSourceNames, materials);
+        if (!containsInDataNodeContainedRule(tableName, schemaMetaData)) {
+            schemaMetaData.getRuleMetaData().findRules(MutableDataNodeRule.class).forEach(each -> each.addDataNode(tableName, logicDataSourceNames.iterator().next()));
         }
-        schema.put(tableName, tableMetaData);
-        ShardingSphereEventBus.getInstance().post(new CreateTableEvent(routeDataSourceNames.iterator().next(), tableName, tableMetaData));
+        SchemaBuilderMaterials materials = new SchemaBuilderMaterials(
+                schemaMetaData.getResource().getDatabaseType(), schemaMetaData.getResource().getDataSources(), schemaMetaData.getRuleMetaData().getRules(), props);
+        TableMetaData tableMetaData = Optional.ofNullable(TableMetaDataBuilder.load(Collections.singletonList(tableName), materials).get(tableName))
+                .map(each -> TableMetaDataBuilder.decorateKernelTableMetaData(each, materials.getRules())).orElseGet(TableMetaData::new);
+        schemaMetaData.getSchema().put(tableName, tableMetaData);
     }
     
-    private boolean containsInTableContainedRule(final String tableName, final SchemaBuilderMaterials materials) {
-        for (ShardingSphereRule each : materials.getRules()) {
-            if (each instanceof TableContainedRule && ((TableContainedRule) each).getTables().contains(tableName)) {
-                return true;
-            }
-        }
-        return false;
-    }
-    
-    private TableMetaData loadTableMetaData(final String tableName, final Collection<String> routeDataSourceNames, 
-                                            final SchemaBuilderMaterials materials) throws SQLException {
-        for (String routeDataSourceName : routeDataSourceNames) {
-            DataSource dataSource = materials.getDataSourceMap().get(routeDataSourceName);
-            Optional<TableMetaData> tableMetaDataOptional = Objects.isNull(dataSource) ? Optional.empty()
-                    : TableMetaDataLoader.load(dataSource, tableName, materials.getDatabaseType());
-            if (!tableMetaDataOptional.isPresent()) {
-                continue;
-            }
-            return tableMetaDataOptional.get();
-        }
-        return new TableMetaData();
+    private boolean containsInDataNodeContainedRule(final String tableName, final ShardingSphereMetaData schemaMetaData) {
+        return schemaMetaData.getRuleMetaData().findRules(DataNodeContainedRule.class).stream().anyMatch(each -> each.getAllTables().contains(tableName));
     }
 }

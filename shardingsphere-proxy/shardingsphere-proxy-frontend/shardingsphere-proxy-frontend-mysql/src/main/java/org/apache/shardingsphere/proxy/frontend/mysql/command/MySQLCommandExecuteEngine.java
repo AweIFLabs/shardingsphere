@@ -61,7 +61,7 @@ public final class MySQLCommandExecuteEngine implements CommandExecuteEngine {
     }
     
     @Override
-    public DatabasePacket<?> getErrorPacket(final Exception cause) {
+    public DatabasePacket<?> getErrorPacket(final Exception cause, final BackendConnection backendConnection) {
         return MySQLErrPacketFactory.newInstance(cause);
     }
     
@@ -71,13 +71,13 @@ public final class MySQLCommandExecuteEngine implements CommandExecuteEngine {
     }
     
     @Override
-    public void writeQueryData(final ChannelHandlerContext context, 
-                               final BackendConnection backendConnection, final QueryCommandExecutor queryCommandExecutor, final int headerPackagesCount) throws SQLException {
+    public boolean writeQueryData(final ChannelHandlerContext context,
+                                  final BackendConnection backendConnection, final QueryCommandExecutor queryCommandExecutor, final int headerPackagesCount) throws SQLException {
         if (ResponseType.QUERY != queryCommandExecutor.getResponseType() || !context.channel().isActive()) {
-            return;
+            return true;
         }
         int count = 0;
-        int flushThreshold = ProxyContext.getInstance().getMetaDataContexts().getProps().<Integer>getValue(ConfigurationPropertyKey.PROXY_FRONTEND_FLUSH_THRESHOLD);
+        int flushThreshold = ProxyContext.getInstance().getContextManager().getMetaDataContexts().getProps().<Integer>getValue(ConfigurationPropertyKey.PROXY_FRONTEND_FLUSH_THRESHOLD);
         int currentSequenceId = 0;
         while (queryCommandExecutor.next()) {
             count++;
@@ -94,5 +94,6 @@ public final class MySQLCommandExecuteEngine implements CommandExecuteEngine {
             currentSequenceId++;
         }
         context.write(new MySQLEofPacket(++currentSequenceId + headerPackagesCount));
+        return true;
     }
 }

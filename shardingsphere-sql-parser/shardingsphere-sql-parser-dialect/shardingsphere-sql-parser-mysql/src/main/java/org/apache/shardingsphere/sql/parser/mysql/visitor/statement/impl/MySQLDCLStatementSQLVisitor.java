@@ -86,6 +86,7 @@ import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.StaticP
 import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.StaticPrivilegeTriggerContext;
 import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.StaticPrivilegeUpdateContext;
 import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.StaticPrivilegeUsageContext;
+import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.String_Context;
 import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.TlsOptionContext;
 import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.UserNameContext;
 import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.ACLTypeEnum;
@@ -93,6 +94,7 @@ import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.GrantLeve
 import org.apache.shardingsphere.sql.parser.sql.common.segment.generic.PrivilegeTypeEnum;
 import org.apache.shardingsphere.sql.parser.sql.common.value.identifier.IdentifierValue;
 import org.apache.shardingsphere.sql.parser.sql.common.value.literal.impl.NumberLiteralValue;
+import org.apache.shardingsphere.sql.parser.sql.common.value.literal.impl.StringLiteralValue;
 import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dcl.MySQLAlterUserStatement;
 import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dcl.MySQLCreateRoleStatement;
 import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.dcl.MySQLCreateUserStatement;
@@ -115,6 +117,7 @@ import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.segment.
 import org.apache.shardingsphere.sql.parser.sql.dialect.statement.mysql.segment.UserSegment;
 
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 /**
  * DCL Statement SQL visitor for MySQL.
@@ -150,9 +153,6 @@ public final class MySQLDCLStatementSQLVisitor extends MySQLStatementSQLVisitor 
         }
         if (null != ctx.aclType()) {
             switch (ctx.aclType().getText().toLowerCase()) {
-                case "table":
-                    result.setAclType(ACLTypeEnum.TABLE);
-                    break;
                 case "function":
                     result.setAclType(ACLTypeEnum.FUNCTION);
                     break;
@@ -555,7 +555,7 @@ public final class MySQLDCLStatementSQLVisitor extends MySQLStatementSQLVisitor 
         result.setStartIndex(ctx.start.getStartIndex());
         result.setStopIndex(ctx.stop.getStopIndex());
         if (null != ctx.string_()) {
-            result.setAuth(ctx.string_().getText());
+            result.setAuth(((StringLiteralValue) visit(ctx.string_())).getValue());
             result.setHasPasswordGenerator(false);
             result.setUsesIdentifiedByClause(true);
             result.setDiscardOldPassword(false);
@@ -567,6 +567,11 @@ public final class MySQLDCLStatementSQLVisitor extends MySQLStatementSQLVisitor 
         }
         result.setRetainCurrentPassword(false);
         return result;
+    }
+    
+    @Override
+    public ASTNode visitString_(final String_Context ctx) {
+        return new StringLiteralValue(ctx.getText());
     }
     
     @Override
@@ -582,14 +587,14 @@ public final class MySQLDCLStatementSQLVisitor extends MySQLStatementSQLVisitor 
             result.setRetainCurrentPassword(false);
         } else if (null != ctx.AS()) {
             result.setPlugin(ctx.textOrIdentifier().getText());
-            result.setAuth(ctx.string_().getText());
+            result.setAuth(((StringLiteralValue) visit(ctx.string_())).getValue());
             result.setHasPasswordGenerator(false);
             result.setUsesIdentifiedByClause(true);
             result.setDiscardOldPassword(false);
             result.setRetainCurrentPassword(false);
         } else if (null != ctx.BY() && null != ctx.string_()) {
             result.setPlugin(ctx.textOrIdentifier().getText());
-            result.setAuth(ctx.string_().getText());
+            result.setAuth(((StringLiteralValue) visit(ctx.string_())).getValue());
             result.setHasPasswordGenerator(false);
             result.setUsesIdentifiedByClause(true);
             result.setUsesIdentifiedWithClause(true);
@@ -597,7 +602,7 @@ public final class MySQLDCLStatementSQLVisitor extends MySQLStatementSQLVisitor 
             result.setRetainCurrentPassword(false);
         } else {
             result.setPlugin(ctx.textOrIdentifier().getText());
-            result.setAuth(ctx.string_().getText());
+            result.setAuth(((StringLiteralValue) visit(ctx.string_())).getValue());
             result.setHasPasswordGenerator(true);
             result.setUsesIdentifiedByClause(true);
             result.setUsesIdentifiedWithClause(true);
@@ -723,7 +728,9 @@ public final class MySQLDCLStatementSQLVisitor extends MySQLStatementSQLVisitor 
     
     @Override
     public ASTNode visitDropUser(final DropUserContext ctx) {
-        return new MySQLDropUserStatement();
+        MySQLDropUserStatement result = new MySQLDropUserStatement();
+        result.getUsers().addAll(ctx.userName().stream().map(UserNameContext::getText).collect(Collectors.toList()));
+        return result;
     }
     
     @Override

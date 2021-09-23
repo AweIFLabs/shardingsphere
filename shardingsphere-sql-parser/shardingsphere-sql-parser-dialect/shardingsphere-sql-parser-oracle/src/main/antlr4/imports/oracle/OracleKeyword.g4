@@ -535,6 +535,10 @@ INDEXTYPE
     : I N D E X T Y P E
     ;
 
+INDEXTYPES
+    : I N D E X T Y P E S
+    ;
+
 EXTERNAL
     : E X T E R N A L
     ;
@@ -677,6 +681,10 @@ SYSKM
 
 SYSOPER
     : S Y S O P E R
+    ;
+
+RECYCLEBIN
+    : R E C Y C L E B I N
     ;
 
 DBA_RECYCLEBIN
@@ -1985,4 +1993,552 @@ SERIALIZABLE
 
 COMMITTED
     : C O M M I T T E D
+    ;
+
+FILTER
+    : F I L T E R
+    ;
+
+FACT
+    : F A C T
+    ;
+
+DETERMINISTIC
+    : D E T E R M I N I S T I C
+    ;
+
+PIPELINED
+    : P I P E L I N E D
+    ;
+
+PARALLEL_ENABLE
+    : P A R A L L E L UL_ E N A B L E
+    ;
+
+OUT
+    : O U T
+    ;
+
+NOCOPY
+    : N O C O P Y
+    ;
+
+ACCESSIBLE
+    : A C C E S S I B L E
+    ;
+
+PACKAGE
+    : P A C K A G E
+    ;
+
+PACKAGES
+    : P A C K A G E S
+    ;
+
+USING_NLS_COMP
+    : U S I N G UL_ N L S UL_ C O M P
+    ;
+
+AUTHID
+    : A U T H I D
+    ;
+
+SEARCH
+    : S E A R C H
+    ;
+
+DEPTH
+    : D E P T H
+    ;
+
+BREADTH
+    : B R E A D T H
+    ;
+
+ANALYTIC
+    : A N A L Y T I C
+    ;
+
+HIERARCHIES
+    : H I E R A R C H I E S
+    ;
+
+MEASURES
+    : M E A S U R E S
+    ;
+
+OVER
+    : O V E R
+    ;
+
+LAG
+    : L A G
+    ;
+
+LAG_DIFF
+    : L A G UL_ D I F F
+    ;
+
+LAG_DIF_PERCENT
+    : L A G UL_ D I F UL_ P E R C E N T
+    ;
+
+LEAD
+    : L E A D
+    ;
+
+LEAD_DIFF
+    : L E A D UL_ D I F F
+    ;
+
+LEAD_DIFF_PERCENT
+    : L E A D UL_ D I F F UL_ P E R C E N T
+    ;
+
+HIERARCHY
+    : H I E R A R C H Y
+    ;
+
+WITHIN
+    : W I T H I N
+    ;
+
+ACROSS
+    : A C R O S S
+    ;
+
+ANCESTOR
+    : A N C E S T O R
+    ;
+
+BEGINNING
+    : B E G I N N I N G
+    ;
+
+UNBOUNDED
+    : U N B O U N D E D
+    ;
+
+PRECEDING
+    : P R E C E D I N G
+    ;
+
+FOLLOWING
+    : F O L L O W I N G
+    ;
+
+RANK
+    : R A N K
+    ;
+
+DENSE_RANK
+    : D E N S E UL_ R A N K
+    ;
+
+AVERAGE_RANK
+    : A V E R A G E UL_ R A N K
+    ;
+
+ROW_NUMBER
+    : R O W UL_ N U M B E R
+    ;
+
+SHARE_OF
+    : S H A R E UL_ O F
+    ;
+
+HIER_ANCESTOR
+    : H I E R UL_ A N C E S T O R
+    ;
+
+HIER_PARENT
+    : H I E R UL_ P A R E N T
+    ;
+
+HIER_LEAD
+    : H I E R UL_ L E A D
+    ;
+
+HIER_LAG
+    : H I E R UL_ L A G
+    ;
+
+QUALIFY
+    : Q U A L I F Y
+    ;
+
+HIER_CAPTION
+    : H I E R UL_ C A P T I O N
+    ;
+
+HIER_DEPTH
+    : H I E R UL_ D E P T H
+    ;
+
+HIER_DESCRIPTION
+    : H I E R UL_ D E S C R I P T I O N
+    ;
+
+HIER_LEVEL
+    : H I E R UL_ L E V E L
+    ;
+
+HIER_MEMBER_NAME
+    : H I E R UL_ M E M B E R UL_ N A M E
+    ;
+
+HIER_MEMBER_UNIQUE_NAME
+    : H I E R UL_ M E M B E R UL_ U N I Q U E UL_ N A M E
+    ;
+
+CHAINED
+    : C H A I N E D
+    ;
+
+STATISTICS
+    : S T A T I S T I C S
+    ;
+
+DANGLING
+    : D A N G L I N G
+    ;
+
+STRUCTURE
+    : S T R U C T U R E
+    ;
+
+FAST
+    : F A S T
+    ;
+
+COMPLETE
+    : C O M P L E T E
+    ;
+
+ASSOCIATE
+    : A S S O C I A T E
+    ;
+
+DISASSOCIATE
+    : D I S A S S O C I A T E
+    ;
+
+FUNCTIONS
+    : F U N C T I O N S
+    ;
+
+TYPES
+    : T Y P E S
+    ;
+
+SELECTIVITY
+    : S E L E C T I V I T Y
+    ;
+
+RETURNING
+    : R E T U R N I N G
+    ;
+
+VERSIONS
+    : V E R S I O N S
+    ;
+
+SCN
+    : S C N
+    ;
+
+PERIOD
+    : P E R I O D
+    ;
+
+LATERAL
+    : L A T E R A L
+    ;
+
+BADFILE
+    : B A D F I L E
+    ;
+
+DISCARDFILE
+    : D I S C A R D F I L E
+    ;
+
+PIVOT
+    : P I V O T
+    ;
+
+UNPIVOT
+    : U N P I V O T
+    ;
+
+INCLUDE
+    : I N C L U D E
+    ;
+
+EXCLUDE
+    : E X C L U D E
+    ;
+
+SAMPLE
+    : S A M P L E
+    ;
+
+SEED
+    : S E E D
+    ;
+
+OPTION
+    : O P T I O N
+    ;
+
+SHARDS
+    : S H A R D S
+    ;
+
+MATCH_RECOGNIZE
+    : M A T C H UL_ R E C O G N I Z E
+    ;
+
+PATTERN
+    : P A T T E R N
+    ;
+
+DEFINE
+    : D E F I N E
+    ;
+
+ONE
+    : O N E
+    ;
+
+PER
+    : P E R
+    ;
+
+MATCH
+    : M A T C H
+    ;
+
+PAST
+    : P A S T
+    ;
+
+PERMUTE
+    : P E R M U T E
+    ;
+
+CLASSIFIER
+    : C L A S S I F I E R
+    ;
+
+MATCH_NUMBER
+    : M A T C H UL_ N U M B E R
+    ;
+
+RUNNING
+    : R U N N I N G
+    ;
+
+FINAL
+    : F I N A L
+    ;
+
+PREV
+    : P R E V
+    ;
+
+NOAUDIT
+    : N O A U D I T
+    ;
+
+WHENEVER
+    : W H E N E V E R
+    ;
+
+SUCCESSFUL
+    : S U C C E S S F U L
+    ;
+
+USERS
+    : U S E R S
+    ;
+
+GRANTED
+    : G R A N T E D
+    ;
+
+ROLES
+    : R O L E S
+    ;
+
+NAMESPACE
+    : N A M E S P A C E
+    ;
+
+ROLLUP
+    : R O L L U P
+    ;
+
+GROUPING
+    : G R O U P I N G
+    ;
+
+SETS
+    : S E T S
+    ;
+
+DECODE
+    : D E C O D E
+    ;
+
+RESTORE
+    : R E S T O R E
+    ;
+
+POINT
+    : P O I N T
+    ;
+
+BEFORE
+    : B E F O R E
+    ;
+
+IGNORE
+    : I G N O R E
+    ;
+
+NAV
+    : N A V
+    ;
+
+SINGLE
+    : S I N G L E
+    ;
+
+UPDATED
+    : U P D A T E D
+    ;
+
+MAIN
+    : M A I N
+    ;
+
+RULES
+    : R U L E S
+    ;
+
+UPSERT
+    : U P S E R T
+    ;
+
+SEQUENTIAL
+    : S E Q U E N T I A L
+    ;
+
+ITERATE
+    : I T E R A T E
+    ;
+
+DECREMENT
+    : D E C R E M E N T
+    ;
+
+SOME
+    : S O M E
+    ;
+
+NAN
+    : N A N
+    ;
+
+INFINITE
+    : I N F I N I T E
+    ;
+
+PRESENT
+    : P R E S E N T
+    ;
+
+EMPTY
+    : E M P T Y
+    ;
+
+SUBMULTISET
+    : S U B M U L T I S E T
+    ;
+
+LIKEC
+    : L I K E C
+    ;
+
+LIKE2
+    : L I K E '2'
+    ;
+
+LIKE4
+    : L I K E '4'
+    ;
+
+REGEXP_LIKE
+    : R E G E X P UL_ L I K E
+    ;
+
+EQUALS_PATH
+    : E Q U A L S UL_ P A T H
+    ;
+
+UNDER_PATH
+    : U N D E R UL_ P A T H
+    ;
+
+FORMAT
+    : F O R M A T
+    ;
+
+STRICT
+    : S T R I C T
+    ;
+
+LAX
+    : L A X
+    ;
+
+KEYS
+    : K E Y S
+    ;
+
+JSON_EQUAL
+    : J S O N UL_ E Q U A L
+    ;
+
+JSON_EXISTS
+    : J S O N UL_ E X I S T S
+    ;
+
+PASSING
+    : P A S S I N G
+    ;
+
+ERROR
+    : E R R O R
+    ;
+
+JSON_TEXTCONTAINS
+    : J S O N UL_ T E X T C O N T A I N S
+    ;
+
+HAS
+    : H A S
+    ;
+
+STARTS
+    : S T A R T S
+    ;
+
+LIKE_REGEX
+    : L I K E UL_ R E G E X
+    ;
+
+EQ_REGEX
+    : E Q UL_ R E G E X
     ;

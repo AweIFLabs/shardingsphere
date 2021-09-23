@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.apache.shardingsphere.example</groupId>
         <artifactId>shardingsphere-example</artifactId>
-        <version>5.0.0-alpha</version>
+        <version>5.0.0-RC1-SNAPSHOT</version>
     </parent>
     <artifactId>shardingsphere-jdbc-example</artifactId>
     <packaging>pom</packaging>
@@ -31,8 +31,9 @@
     
     <modules>
         <module>sharding-example</module>
-        <module>governance-example</module>
+        <module>cluster-mode-example</module>
         <module>transaction-example</module>
         <module>other-feature-example</module>
+        <module>extension-example</module>
     </modules>
 </project>

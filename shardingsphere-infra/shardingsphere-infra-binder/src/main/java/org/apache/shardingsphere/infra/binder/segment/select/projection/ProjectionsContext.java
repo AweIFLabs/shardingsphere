@@ -24,6 +24,7 @@ import org.apache.shardingsphere.infra.binder.segment.select.projection.impl.Agg
 import org.apache.shardingsphere.infra.binder.segment.select.projection.impl.AggregationProjection;
 import org.apache.shardingsphere.infra.binder.segment.select.projection.impl.DerivedProjection;
 import org.apache.shardingsphere.infra.binder.segment.select.projection.impl.ShorthandProjection;
+import org.apache.shardingsphere.sql.parser.sql.common.util.SQLUtil;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -68,7 +69,10 @@ public final class ProjectionsContext {
      */
     public Optional<String> findAlias(final String projectionName) {
         for (Projection each : projections) {
-            if (projectionName.equalsIgnoreCase(each.getExpression())) {
+            if (each instanceof ShorthandProjection && ((ShorthandProjection) each).getActualColumns().containsKey(projectionName.toLowerCase())) {
+                return ((ShorthandProjection) each).getActualColumns().get(projectionName.toLowerCase()).getAlias();
+            }
+            if (projectionName.equalsIgnoreCase(SQLUtil.getExactlyValue(each.getExpression()))) {
                 return each.getAlias();
             }
         }
@@ -77,14 +81,14 @@ public final class ProjectionsContext {
     
     /**
      * Find projection index.
-     *
+     * 
      * @param projectionName projection name
      * @return projection index
      */
     public Optional<Integer> findProjectionIndex(final String projectionName) {
         int result = 1;
         for (Projection each : projections) {
-            if (projectionName.equalsIgnoreCase(each.getExpression())) {
+            if (projectionName.equalsIgnoreCase(SQLUtil.getExactlyValue(each.getExpression()))) {
                 return Optional.of(result);
             }
             result++;
@@ -94,7 +98,7 @@ public final class ProjectionsContext {
     
     /**
      * Get aggregation projections.
-     *
+     * 
      * @return aggregation projections
      */
     public List<AggregationProjection> getAggregationProjections() {
@@ -111,7 +115,7 @@ public final class ProjectionsContext {
     
     /**
      * Get aggregation distinct projections.
-     *
+     * 
      * @return aggregation distinct projections
      */
     public List<AggregationDistinctProjection> getAggregationDistinctProjections() {
@@ -133,7 +137,7 @@ public final class ProjectionsContext {
         List<Projection> result = new ArrayList<>();
         for (Projection each : projections) {
             if (each instanceof ShorthandProjection) {
-                result.addAll(((ShorthandProjection) each).getActualColumns());
+                result.addAll(((ShorthandProjection) each).getActualColumns().values());
             } else if (!(each instanceof DerivedProjection)) {
                 result.add(each);
             }

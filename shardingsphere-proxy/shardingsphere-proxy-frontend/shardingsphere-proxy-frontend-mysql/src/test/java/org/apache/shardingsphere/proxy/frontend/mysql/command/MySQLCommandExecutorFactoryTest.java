@@ -27,12 +27,14 @@ import org.apache.shardingsphere.db.protocol.mysql.packet.command.query.text.fie
 import org.apache.shardingsphere.db.protocol.mysql.packet.command.query.text.query.MySQLComQueryPacket;
 import org.apache.shardingsphere.db.protocol.packet.CommandPacket;
 import org.apache.shardingsphere.infra.config.properties.ConfigurationProperties;
-import org.apache.shardingsphere.infra.context.metadata.MetaDataContexts;
-import org.apache.shardingsphere.infra.context.metadata.impl.StandardMetaDataContexts;
 import org.apache.shardingsphere.infra.database.type.dialect.MySQLDatabaseType;
 import org.apache.shardingsphere.infra.executor.kernel.ExecutorEngine;
 import org.apache.shardingsphere.infra.metadata.ShardingSphereMetaData;
 import org.apache.shardingsphere.infra.metadata.rule.ShardingSphereRuleMetaData;
+import org.apache.shardingsphere.infra.optimize.context.original.OriginalOptimizerContext;
+import org.apache.shardingsphere.mode.manager.ContextManager;
+import org.apache.shardingsphere.mode.metadata.MetaDataContexts;
+import org.apache.shardingsphere.mode.metadata.persist.MetaDataPersistService;
 import org.apache.shardingsphere.proxy.backend.communication.jdbc.connection.BackendConnection;
 import org.apache.shardingsphere.proxy.backend.context.ProxyContext;
 import org.apache.shardingsphere.proxy.frontend.mysql.command.admin.initdb.MySQLComInitDbExecutor;
@@ -72,13 +74,16 @@ public final class MySQLCommandExecutorFactoryTest {
     @Before
     public void setUp() throws ReflectiveOperationException {
         when(backendConnection.getSchemaName()).thenReturn("logic_db");
-        Field field = ProxyContext.getInstance().getClass().getDeclaredField("metaDataContexts");
-        field.setAccessible(true);
+        when(backendConnection.getDefaultSchemaName()).thenReturn("logic_db");
+        Field contextManagerField = ProxyContext.getInstance().getClass().getDeclaredField("contextManager");
+        contextManagerField.setAccessible(true);
         ShardingSphereMetaData metaData = mockShardingSphereMetaData();
         Map<String, ShardingSphereMetaData> metaDataMap = Collections.singletonMap("logic_db", metaData);
-        MetaDataContexts metaDataContexts = new StandardMetaDataContexts(metaDataMap,
-                mock(ShardingSphereRuleMetaData.class), mock(ExecutorEngine.class), new ConfigurationProperties(new Properties()));
-        field.set(ProxyContext.getInstance(), metaDataContexts);
+        ContextManager contextManager = mock(ContextManager.class, RETURNS_DEEP_STUBS);
+        MetaDataContexts metaDataContexts = new MetaDataContexts(mock(MetaDataPersistService.class), metaDataMap,
+                mock(ShardingSphereRuleMetaData.class), mock(ExecutorEngine.class), new ConfigurationProperties(new Properties()), mock(OriginalOptimizerContext.class, RETURNS_DEEP_STUBS));
+        when(contextManager.getMetaDataContexts()).thenReturn(metaDataContexts);
+        contextManagerField.set(ProxyContext.getInstance(), contextManager);
     }
     
     private ShardingSphereMetaData mockShardingSphereMetaData() {

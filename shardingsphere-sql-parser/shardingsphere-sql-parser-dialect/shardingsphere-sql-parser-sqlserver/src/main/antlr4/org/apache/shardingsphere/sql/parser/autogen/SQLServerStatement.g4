@@ -28,9 +28,17 @@ execute
     | alterIndex
     | dropIndex
     | createTable
+    | createDatabase
+    | createProcedure
+    | createView
+    | createTrigger
+    | createSequence
     | alterTable
+    | alterTrigger
+    | alterSequence
     | dropTable
     | truncateTable
+    | createFunction
     | setTransaction
     | beginTransaction
     | setImplicitTransactions
